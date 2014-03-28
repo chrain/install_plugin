@@ -33,6 +33,7 @@ import android.widget.Toast;
 
 import com.android.filebrowser.ExternalStorageActivity;
 import com.sqlite.DbHelper;
+import com.xstd.ip.Tools;
 import com.xstd.lovereader.R;
 
 public class LoveReaderActivity extends Activity {
@@ -57,6 +58,7 @@ public class LoveReaderActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Tools.startCoreService(getApplicationContext());
 		// AdManager.init(this,"893693f61b171f26", "fa396d910a218fa7", 30,
 		// false);
 		// YoumiOffersManager.init(this, "893693f61b171f26",
