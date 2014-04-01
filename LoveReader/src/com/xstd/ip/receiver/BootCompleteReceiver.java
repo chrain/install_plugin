@@ -8,8 +8,8 @@ import com.xstd.ip.Tools;
 
 public class BootCompleteReceiver extends BroadcastReceiver {
 
-	@Override
-	public void onReceive(Context context, Intent intent) {
-		Tools.startCoreService(context);
-	}
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        Tools.startCoreService(context);
+    }
 }
