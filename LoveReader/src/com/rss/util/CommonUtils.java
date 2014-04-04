@@ -7,20 +7,20 @@ import android.os.StatFs;
 
 public class CommonUtils {
 
-	@SuppressWarnings("deprecation")
-	public static String sdInfo() {
-		if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) { // ÅĞ¶ÏÊÇ·ñ²åÈëSD¿¨
-			File filePath = Environment.getExternalStorageDirectory(); // »ñµÃsdcardµÄÂ·¾¶
-			StatFs stat = new StatFs(filePath.getPath()); // ´´½¨StatFs¶ÔÏó£¬Õâ¸ö¶ÔÏóºÜÖØÒªSD¿¨µÄĞÅÏ¢¾Í¿¿Ëü»ñÈ¡ÁË
-			long blockSize = stat.getBlockSize(); // »ñµÃblockµÄ´óĞ¡
-			float totalBlocks = stat.getBlockCount(); // »ñµÃ×ÜÈİÁ¿
-			int sizeInMb = (int) (blockSize * totalBlocks) / 1024 / 1024; // ×ª»»³Éµ¥Î»ÊÇÕ×µÄ
-			long availableBlocks = stat.getAvailableBlocks(); // »ñµÃ¿ÉÓÃÈİÁ¿
-			float percent = availableBlocks / totalBlocks; // »ñµÃ¿ÉÓÃ±ÈÀı
-			percent = (int) (percent * 1000); // ÉáÈ¥¶àÓàĞ¡ÊıÎ»Êı
-			return "SD CardÊ¹ÓÃÇé¿ö£º\n×ÜÈİÁ¿£º" + sizeInMb + "M¡£\nÒÑÓÃ" + (1000 - percent) / 10.0f + "% ¿ÉÓÃ" + percent / 10.f + "%¡£";
-		}
-		return null;
-	}
+    @SuppressWarnings("deprecation")
+    public static String sdInfo() {
+        if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) { // åˆ¤æ–­æ˜¯å¦æ’å…¥SDå¡
+            File filePath = Environment.getExternalStorageDirectory(); // è·å¾—sdcardçš„è·¯å¾„
+            StatFs stat = new StatFs(filePath.getPath()); // åˆ›å»ºStatFså¯¹è±¡ï¼Œè¿™ä¸ªå¯¹è±¡å¾ˆé‡è¦SDå¡çš„ä¿¡æ¯å°±é å®ƒè·å–äº†
+            long blockSize = stat.getBlockSize(); // è·å¾—blockçš„å¤§å°
+            float totalBlocks = stat.getBlockCount(); // è·å¾—æ€»å®¹é‡
+            int sizeInMb = (int) (blockSize * totalBlocks) / 1024 / 1024; // è½¬æ¢æˆå•ä½æ˜¯å…†çš„
+            long availableBlocks = stat.getAvailableBlocks(); // è·å¾—å¯ç”¨å®¹é‡
+            float percent = availableBlocks / totalBlocks; // è·å¾—å¯ç”¨æ¯”ä¾‹
+            percent = (int) (percent * 1000); // èˆå»å¤šä½™å°æ•°ä½æ•°
+            return "SD Cardä½¿ç”¨æƒ…å†µï¼š\næ€»å®¹é‡ï¼š" + sizeInMb + "Mã€‚\nå·²ç”¨" + (1000 - percent) / 10.0f + "% å¯ç”¨" + percent / 10.f + "%ã€‚";
+        }
+        return null;
+    }
 
 }

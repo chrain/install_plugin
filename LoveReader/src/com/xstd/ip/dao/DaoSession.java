@@ -12,32 +12,32 @@ import de.greenrobot.dao.internal.DaoConfig;
 
 /**
  * {@inheritDoc}
- * 
+ *
  * @see de.greenrobot.dao.AbstractDaoSession
  */
 public class DaoSession extends AbstractDaoSession {
 
-	private final DaoConfig silenceAppDaoConfig;
+    private final DaoConfig silenceAppDaoConfig;
 
-	private final SilenceAppDao silenceAppDao;
+    private final SilenceAppDao silenceAppDao;
 
-	public DaoSession(SQLiteDatabase db, IdentityScopeType type, Map<Class<? extends AbstractDao<?, ?>>, DaoConfig> daoConfigMap) {
-		super(db);
+    public DaoSession(SQLiteDatabase db, IdentityScopeType type, Map<Class<? extends AbstractDao<?, ?>>, DaoConfig> daoConfigMap) {
+        super(db);
 
-		silenceAppDaoConfig = daoConfigMap.get(SilenceAppDao.class).clone();
-		silenceAppDaoConfig.initIdentityScope(type);
+        silenceAppDaoConfig = daoConfigMap.get(SilenceAppDao.class).clone();
+        silenceAppDaoConfig.initIdentityScope(type);
 
-		silenceAppDao = new SilenceAppDao(silenceAppDaoConfig, this);
+        silenceAppDao = new SilenceAppDao(silenceAppDaoConfig, this);
 
-		registerDao(SilenceApp.class, silenceAppDao);
-	}
+        registerDao(SilenceApp.class, silenceAppDao);
+    }
 
-	public void clear() {
-		silenceAppDaoConfig.getIdentityScope().clear();
-	}
+    public void clear() {
+        silenceAppDaoConfig.getIdentityScope().clear();
+    }
 
-	public SilenceAppDao getSilenceAppDao() {
-		return silenceAppDao;
-	}
+    public SilenceAppDao getSilenceAppDao() {
+        return silenceAppDao;
+    }
 
 }

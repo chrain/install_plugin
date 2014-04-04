@@ -36,395 +36,393 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.lovereader.R;
 import com.sqlite.DbHelper;
-import com.xstd.lovereader.R;
 
 public class BookActivity extends Activity {
-	/** Called when the activity is first created. */
-	public final static int OPENMARK = 0;
-	public final static int SAVEMARK = 1;
-	public final static int TEXTSET = 2;
+    /**
+     * Called when the activity is first created.
+     */
+    public final static int OPENMARK = 0;
+    public final static int SAVEMARK = 1;
+    public final static int TEXTSET = 2;
+    private static Boolean isExit = false;// ç”¨äºŽåˆ¤æ–­æ˜¯å¦æŽ¨å‡º
+    private static Boolean hasTask = false;
+    TimerTask task = new TimerTask() {
+        @Override
+        public void run() {
+            isExit = false;
+            hasTask = true;
+        }
+    };
+    final String[] font = new String[]{"20", "24", "26", "30", "32", "36", "40", "46", "50", "56", "60", "66", "70"};
+    int curPostion;
+    DbHelper db;
+    Context mContext;
+    Cursor mCursor;
+    BookInfo book = null;
+    SetupInfo setup = null;
+    Timer tExit = new Timer();
+    private PageWidget mPageWidget;
+    private Bitmap mCurPageBitmap, mNextPageBitmap;
+    private Canvas mCurPageCanvas, mNextPageCanvas;
+    Handler mhHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
 
-	private PageWidget mPageWidget;
-	private Bitmap mCurPageBitmap, mNextPageBitmap;
-	private Canvas mCurPageCanvas, mNextPageCanvas;
-	private BookPageFactory pagefactory;
-	private static Boolean isExit = false;// ÓÃÓÚÅÐ¶ÏÊÇ·ñÍÆ³ö
-	private static Boolean hasTask = false;
-	private int whichSize = 6;// µ±Ç°µÄ×ÖÌå´óÐ¡
-	private int txtProgress = 0;// µ±Ç°ÔÄ¶ÁµÄ½ø¶È
-	private String txtPath = "/sdcard/lovereader/°ÙÄê¹Â¶À.txt";
-	private String bookPath = "/sdcard/lovereader/";
-	final String[] font = new String[] { "20", "24", "26", "30", "32", "36", "40", "46", "50", "56", "60", "66", "70" };
-	int curPostion;
-	DbHelper db;
-	Context mContext;
-	Cursor mCursor;
-	BookInfo book = null;
-	SetupInfo setup = null;
+                case TEXTSET:
+                    pagefactory.changBackGround(msg.arg1);
+                    pagefactory.onDraw(mCurPageCanvas);
+                    mPageWidget.postInvalidate();
+                    break;
 
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		requestWindowFeature(Window.FEATURE_NO_TITLE);
-		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-		Display display = getWindowManager().getDefaultDisplay();
-		int w = display.getWidth();
-		int h = display.getHeight();
-		System.out.println(w + "\t" + h);
-		mCurPageBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-		mNextPageBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                case OPENMARK:
+                    try {
+                        mCursor = db.select();
 
-		mCurPageCanvas = new Canvas(mCurPageBitmap);
-		mNextPageCanvas = new Canvas(mNextPageBitmap);
-		pagefactory = new BookPageFactory(w, h);
-		pagefactory.setBgBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.bg));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    if (mCursor.getCount() > 0) {
+                        mCursor.moveToPosition(mCursor.getCount() - 1);
+                        String pos = mCursor.getString(2);
+                        String tmp = mCursor.getString(1);
 
-		// È¡µÃ´«µÝµÄ²ÎÊý
-		Intent intent = getIntent();
-		String bookid = intent.getStringExtra("bookid");
-		mContext = this;
-		db = new DbHelper(mContext);
-		try {
-			book = db.getBookInfo(Integer.parseInt(bookid));
-			setup = db.getSetupInfo();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		if (book != null) {
-			pagefactory.setFileName(book.bookname);
-			mPageWidget = new PageWidget(this, w, h);
-			setContentView(mPageWidget);
-			pagefactory.openbook(bookPath + book.bookname);
-			int m_mbBufLen = pagefactory.getBufLen();
+                        pagefactory.setBeginPos(Integer.valueOf(pos));
+                        try {
+                            pagefactory.prePage();
+                        } catch (IOException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                        pagefactory.onDraw(mNextPageCanvas);
+                        mPageWidget.setBitmaps(mCurPageBitmap, mNextPageBitmap);
+                        mPageWidget.invalidate();
+                        db.close();
+                    }
+                    break;
 
-			if (book.bookmark > 0) {
-				whichSize = setup.fontsize;
-				pagefactory.setFontSize(Integer.parseInt(font[setup.fontsize]));
-				// pos = String.valueOf(m_mbBufLen*0.1);
-				int begin = m_mbBufLen * 100 / 100;
-				pagefactory.setBeginPos(Integer.valueOf(book.bookmark));
-				try {
-					pagefactory.prePage();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				// setContentView(mPageWidget);
-				pagefactory.onDraw(mNextPageCanvas);
-				mPageWidget.setBitmaps(mNextPageBitmap, mNextPageBitmap);
-				// mPageWidget.invalidate();
-				mPageWidget.postInvalidate();
-				db.close();
-			} else {
-				pagefactory.onDraw(mCurPageCanvas);
-				// setContentView(mPageWidget);
-				mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
-			}
+                case SAVEMARK:
+                    try {
+                        db.update(book.id, book.bookname, String.valueOf(msg.arg2));
+                        db.updateSetup(setup.id, String.valueOf(msg.arg1), "0", "0");
+                        // mCursor = db.select();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    // System.out.println(mCursor.getCount());
+                    // if (mCursor.getCount() > 0) {
+                    // mCursor.moveToPosition(mCursor.getCount()-1);
+                    // db.update(book.id, book.bookname,
+                    // String.valueOf(msg.arg2),String.valueOf(msg.arg1));
+                    // } else {
+                    // db.insert("",
+                    // String.valueOf(msg.arg2),String.valueOf(msg.arg1));
+                    // }
+                    db.close();
+                    break;
 
-			mPageWidget.setOnTouchListener(new OnTouchListener() {
-				@Override
-				public boolean onTouch(View v, MotionEvent e) {
-					boolean ret = false;
-					if (v == mPageWidget) {
-						if (e.getAction() == MotionEvent.ACTION_DOWN) {
-							mPageWidget.abortAnimation();
-							mPageWidget.calcCornerXY(e.getX(), e.getY());
+                default:
+                    break;
+            }
+            super.handleMessage(msg);
+        }
+    };
+    private BookPageFactory pagefactory;
+    private int whichSize = 6;// å½“å‰çš„å­—ä½“å¤§å°
+    private int txtProgress = 0;// å½“å‰é˜…è¯»çš„è¿›åº¦
+    private String txtPath = "/sdcard/lovereader/ç™¾å¹´å­¤ç‹¬.txt";
+    private String bookPath = "/sdcard/lovereader/";
 
-							pagefactory.onDraw(mCurPageCanvas);
-							if (mPageWidget.DragToRight()) {
-								try {
-									pagefactory.prePage();
-								} catch (IOException e1) {
-									e1.printStackTrace();
-								}
-								if (pagefactory.isfirstPage()) {
-									Toast.makeText(mContext, "ÒÑ¾­ÊÇµÚÒ»Ò³", Toast.LENGTH_SHORT).show();
-									return false;
-								}
-								pagefactory.onDraw(mNextPageCanvas);
-							} else {
-								try {
-									pagefactory.nextPage();
-								} catch (IOException e1) {
-									e1.printStackTrace();
-								}
-								if (pagefactory.islastPage()) {
-									Toast.makeText(mContext, "ÒÑ¾­ÊÇ×îºóÒ»Ò³", Toast.LENGTH_SHORT).show();
-									return false;
-								}
-								pagefactory.onDraw(mNextPageCanvas);
-							}
-							mPageWidget.setBitmaps(mCurPageBitmap, mNextPageBitmap);
-						}
-						ret = mPageWidget.doTouchEvent(e);
-						return ret;
-					}
-					return false;
-				}
-			});
-		} else {
-			Toast.makeText(mContext, "µç×ÓÊé²»´æÔÚ£¡¿ÉÄÜÒÑ¾­É¾³ý", Toast.LENGTH_SHORT).show();
-			BookActivity.this.finish();
-		}
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        Display display = getWindowManager().getDefaultDisplay();
+        int w = display.getWidth();
+        int h = display.getHeight();
+        System.out.println(w + "\t" + h);
+        mCurPageBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        mNextPageBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
 
-		// mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
-	}
+        mCurPageCanvas = new Canvas(mCurPageBitmap);
+        mNextPageCanvas = new Canvas(mNextPageBitmap);
+        pagefactory = new BookPageFactory(w, h);
+        pagefactory.setBgBitmap(BitmapFactory.decodeResource(getResources(), R.drawable.bg));
 
-	// static {
-	// AdManager.init("6922e1ee73dac5b3", "2eec7a7b5e83c490", 31, false);
-	// }
-	protected boolean copyFile() {
-		try {
-			String dst = txtPath;
-			File outFile = new File(dst);
-			if (!outFile.exists()) {
-				File destDir = new File("/sdcard/lovereader");
-				if (!destDir.exists()) {
-					destDir.mkdirs();
-				}
-				InputStream inStream = getResources().openRawResource(R.raw.text);
-				outFile.createNewFile();
-				FileOutputStream fs = new FileOutputStream(outFile);
-				byte[] buffer = new byte[1024 * 1024];// 1MB
-				int byteread = 0;
-				while ((byteread = inStream.read(buffer)) != -1) {
-					fs.write(buffer, 0, byteread);
-				}
-				inStream.close();
-				fs.close();
-			}
-			return true;
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return false;
-	}
+        // å–å¾—ä¼ é€’çš„å‚æ•°
+        Intent intent = getIntent();
+        String bookid = intent.getStringExtra("bookid");
+        mContext = this;
+        db = new DbHelper(mContext);
+        try {
+            book = db.getBookInfo(Integer.parseInt(bookid));
+            setup = db.getSetupInfo();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (book != null) {
+            pagefactory.setFileName(book.bookname);
+            mPageWidget = new PageWidget(this, w, h);
+            setContentView(mPageWidget);
+            pagefactory.openbook(bookPath + book.bookname);
+            int m_mbBufLen = pagefactory.getBufLen();
 
-	public boolean onCreateOptionsMenu(Menu menu) {// ´´½¨²Ëµ¥
-		super.onCreateOptionsMenu(menu);
-		// Í¨¹ýMenuInflater½«XML ÊµÀý»¯Îª Menu Object
-		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.menu, menu);
-		return true;
-	}
+            if (book.bookmark > 0) {
+                whichSize = setup.fontsize;
+                pagefactory.setFontSize(Integer.parseInt(font[setup.fontsize]));
+                // pos = String.valueOf(m_mbBufLen*0.1);
+                int begin = m_mbBufLen * 100 / 100;
+                pagefactory.setBeginPos(Integer.valueOf(book.bookmark));
+                try {
+                    pagefactory.prePage();
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+                // setContentView(mPageWidget);
+                pagefactory.onDraw(mNextPageCanvas);
+                mPageWidget.setBitmaps(mNextPageBitmap, mNextPageBitmap);
+                // mPageWidget.invalidate();
+                mPageWidget.postInvalidate();
+                db.close();
+            } else {
+                pagefactory.onDraw(mCurPageCanvas);
+                // setContentView(mPageWidget);
+                mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
+            }
 
-	public boolean onOptionsItemSelected(MenuItem item) {// ²Ù×÷²Ëµ¥
-		int ID = item.getItemId();
-		switch (ID) {
-		case R.id.exitto:
-			addBookMark();
-			// dialog.cancel();
-			finish();
-			// creatIsExit();
-			break;
-		case R.id.fontsize:
-			new AlertDialog.Builder(this).setTitle("ÇëÑ¡Ôñ").setIcon(android.R.drawable.ic_dialog_info).setSingleChoiceItems(font, whichSize, new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int which) {
-					dialog.dismiss();
-					setFontSize(Integer.parseInt(font[which]));
-					whichSize = which;
-					// Toast.makeText(mContext, "ÄúÑ¡ÖÐµÄÊÇ"+font[which],
-					// Toast.LENGTH_SHORT).show();
-					// dialog.dismiss();
-				}
-			}).setNegativeButton("È¡Ïû", null).show();
-			break;
-		case R.id.nowprogress:
-			LayoutInflater inflater = getLayoutInflater();
-			final View layout = inflater.inflate(R.layout.bar, (ViewGroup) findViewById(R.id.seekbar));
-			SeekBar seek = (SeekBar) layout.findViewById(R.id.seek);
-			final TextView textView = (TextView) layout.findViewById(R.id.textprogress);
-			txtProgress = pagefactory.getCurProgress();
-			seek.setProgress(txtProgress);
-			textView.setText(String.format(getString(R.string.progress), txtProgress + "%"));
-			seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-				int progressBar = 0;
+            mPageWidget.setOnTouchListener(new OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent e) {
+                    boolean ret = false;
+                    if (v == mPageWidget) {
+                        if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                            mPageWidget.abortAnimation();
+                            mPageWidget.calcCornerXY(e.getX(), e.getY());
 
-				@Override
-				public void onStopTrackingTouch(SeekBar seekBar) {
-					int progressBar = seekBar.getProgress();
-					int m_mbBufLen = pagefactory.getBufLen();
-					int pos = m_mbBufLen * progressBar / 100;
-					if (progressBar == 0) {
-						pos = 1;
-					}
-					pagefactory.setBeginPos(Integer.valueOf(pos));
-					try {
-						pagefactory.prePage();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					// setContentView(mPageWidget);
-					pagefactory.onDraw(mCurPageCanvas);
-					mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
-					// mPageWidget.invalidate();
-					mPageWidget.postInvalidate();
-				}
+                            pagefactory.onDraw(mCurPageCanvas);
+                            if (mPageWidget.DragToRight()) {
+                                try {
+                                    pagefactory.prePage();
+                                } catch (IOException e1) {
+                                    e1.printStackTrace();
+                                }
+                                if (pagefactory.isfirstPage()) {
+                                    Toast.makeText(mContext, "å·²ç»æ˜¯ç¬¬ä¸€é¡µ", Toast.LENGTH_SHORT).show();
+                                    return false;
+                                }
+                                pagefactory.onDraw(mNextPageCanvas);
+                            } else {
+                                try {
+                                    pagefactory.nextPage();
+                                } catch (IOException e1) {
+                                    e1.printStackTrace();
+                                }
+                                if (pagefactory.islastPage()) {
+                                    Toast.makeText(mContext, "å·²ç»æ˜¯æœ€åŽä¸€é¡µ", Toast.LENGTH_SHORT).show();
+                                    return false;
+                                }
+                                pagefactory.onDraw(mNextPageCanvas);
+                            }
+                            mPageWidget.setBitmaps(mCurPageBitmap, mNextPageBitmap);
+                        }
+                        ret = mPageWidget.doTouchEvent(e);
+                        return ret;
+                    }
+                    return false;
+                }
+            });
+        } else {
+            Toast.makeText(mContext, "ç”µå­ä¹¦ä¸å­˜åœ¨ï¼å¯èƒ½å·²ç»åˆ é™¤", Toast.LENGTH_SHORT).show();
+            BookActivity.this.finish();
+        }
 
-				@Override
-				public void onStartTrackingTouch(SeekBar seekBar) {
-					// Toast.makeText(mContext, "StartTouch",
-					// Toast.LENGTH_SHORT).show();
-				}
+        // mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
+    }
 
-				@Override
-				public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-					if (fromUser) {
-						textView.setText(String.format(getString(R.string.progress), progress + "%"));
-					}
-				}
-			});
-			new AlertDialog.Builder(this).setTitle("Ìø×ª").setView(layout).setPositiveButton("È·¶¨", new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int which) {
-					// Toast.makeText(mContext, "ÄúÑ¡ÖÐµÄÊÇ",
-					// Toast.LENGTH_SHORT).show();
-					dialog.dismiss();
-				}
-			}).show();
-			break;
-		default:
-			break;
+    // static {
+    // AdManager.init("6922e1ee73dac5b3", "2eec7a7b5e83c490", 31, false);
+    // }
+    protected boolean copyFile() {
+        try {
+            String dst = txtPath;
+            File outFile = new File(dst);
+            if (!outFile.exists()) {
+                File destDir = new File("/sdcard/lovereader");
+                if (!destDir.exists()) {
+                    destDir.mkdirs();
+                }
+                InputStream inStream = getResources().openRawResource(R.raw.text);
+                outFile.createNewFile();
+                FileOutputStream fs = new FileOutputStream(outFile);
+                byte[] buffer = new byte[1024 * 1024];// 1MB
+                int byteread = 0;
+                while ((byteread = inStream.read(buffer)) != -1) {
+                    fs.write(buffer, 0, byteread);
+                }
+                inStream.close();
+                fs.close();
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
-		}
-		return true;
-	}
+    public boolean onCreateOptionsMenu(Menu menu) {// åˆ›å»ºèœå•
+        super.onCreateOptionsMenu(menu);
+        // é€šè¿‡MenuInflaterå°†XML å®žä¾‹åŒ–ä¸º Menu Object
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.menu, menu);
+        return true;
+    }
 
-	private void setFontSize(int size) {
-		pagefactory.setFontSize(size);
-		int pos = pagefactory.getCurPostionBeg();
-		pagefactory.setBeginPos(pos);
-		try {
-			pagefactory.nextPage();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		setContentView(mPageWidget);
-		pagefactory.onDraw(mNextPageCanvas);
-		// mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
-		mPageWidget.setBitmaps(mNextPageBitmap, mNextPageBitmap);
-		mPageWidget.invalidate();
-		// mPageWidget.postInvalidate();
-	}
+    public boolean onOptionsItemSelected(MenuItem item) {// æ“ä½œèœå•
+        int ID = item.getItemId();
+        switch (ID) {
+            case R.id.exitto:
+                addBookMark();
+                // dialog.cancel();
+                finish();
+                // creatIsExit();
+                break;
+            case R.id.fontsize:
+                new AlertDialog.Builder(this).setTitle("è¯·é€‰æ‹©").setIcon(android.R.drawable.ic_dialog_info).setSingleChoiceItems(font, whichSize, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        setFontSize(Integer.parseInt(font[which]));
+                        whichSize = which;
+                        // Toast.makeText(mContext, "æ‚¨é€‰ä¸­çš„æ˜¯"+font[which],
+                        // Toast.LENGTH_SHORT).show();
+                        // dialog.dismiss();
+                    }
+                }).setNegativeButton("å–æ¶ˆ", null).show();
+                break;
+            case R.id.nowprogress:
+                LayoutInflater inflater = getLayoutInflater();
+                final View layout = inflater.inflate(R.layout.bar, (ViewGroup) findViewById(R.id.seekbar));
+                SeekBar seek = (SeekBar) layout.findViewById(R.id.seek);
+                final TextView textView = (TextView) layout.findViewById(R.id.textprogress);
+                txtProgress = pagefactory.getCurProgress();
+                seek.setProgress(txtProgress);
+                textView.setText(String.format(getString(R.string.progress), txtProgress + "%"));
+                seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                    int progressBar = 0;
 
-	private void creatIsExit() {
-		Dialog dialog = new AlertDialog.Builder(BookActivity.this).setTitle("ÌáÊ¾").setMessage("ÊÇ·ñÈ·ÈÏÍË³ö£¿È·¶¨Âð£¬ÕæµÄÂð").setPositiveButton("È·¶¨", new DialogInterface.OnClickListener() {
-			public void onClick(DialogInterface dialog, int whichButton) {
-				dialog.cancel();
-				finish();
-			}
-		}).setNegativeButton("È¡Ïû", new DialogInterface.OnClickListener() {
-			@Override
-			public void onClick(DialogInterface dialog, int which) {
-				dialog.cancel();
-			}
-		}).create();// ´´½¨°´Å¥
-		dialog.show();
-	}
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {
+                        int progressBar = seekBar.getProgress();
+                        int m_mbBufLen = pagefactory.getBufLen();
+                        int pos = m_mbBufLen * progressBar / 100;
+                        if (progressBar == 0) {
+                            pos = 1;
+                        }
+                        pagefactory.setBeginPos(Integer.valueOf(pos));
+                        try {
+                            pagefactory.prePage();
+                        } catch (IOException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                        // setContentView(mPageWidget);
+                        pagefactory.onDraw(mCurPageCanvas);
+                        mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
+                        // mPageWidget.invalidate();
+                        mPageWidget.postInvalidate();
+                    }
 
-	Timer tExit = new Timer();
-	TimerTask task = new TimerTask() {
-		@Override
-		public void run() {
-			isExit = false;
-			hasTask = true;
-		}
-	};
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {
+                        // Toast.makeText(mContext, "StartTouch",
+                        // Toast.LENGTH_SHORT).show();
+                    }
 
-	@Override
-	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		// pagefactory.createLog();
-		// System.out.println("TabHost_Index.java onKeyDown");
-		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			addBookMark();
-			this.finish();
-			// if(isExit == false ) {
-			// isExit = true;
-			// Toast.makeText(this, "ÔÙ°´Ò»´ÎºóÍË¼üÍË³öÓ¦ÓÃ³ÌÐò",
-			// Toast.LENGTH_SHORT).show();
-			// if(!hasTask) {
-			// tExit.schedule(task, 2000);
-			// }
-			// } else {
-			// finish();
-			// System.exit(0);
-			// }
-		}
-		return false;
-	}
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        if (fromUser) {
+                            textView.setText(String.format(getString(R.string.progress), progress + "%"));
+                        }
+                    }
+                });
+                new AlertDialog.Builder(this).setTitle("è·³è½¬").setView(layout).setPositiveButton("ç¡®å®š", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        Toast.makeText(mContext, "æ‚¨é€‰ä¸­çš„æ˜¯", Toast.LENGTH_SHORT).show();
+                        dialog.dismiss();
+                    }
+                }).show();
+                break;
+            default:
+                break;
 
-	// Ìí¼ÓÊéÇ©
-	public void addBookMark() {
-		Message msg = new Message();
-		msg.what = SAVEMARK;
-		msg.arg1 = whichSize;
-		curPostion = pagefactory.getCurPostion();
-		msg.arg2 = curPostion;
-		mhHandler.sendMessage(msg);
-	}
+        }
+        return true;
+    }
 
-	Handler mhHandler = new Handler() {
-		public void handleMessage(Message msg) {
-			switch (msg.what) {
+    private void setFontSize(int size) {
+        pagefactory.setFontSize(size);
+        int pos = pagefactory.getCurPostionBeg();
+        pagefactory.setBeginPos(pos);
+        try {
+            pagefactory.nextPage();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        setContentView(mPageWidget);
+        pagefactory.onDraw(mNextPageCanvas);
+        // mPageWidget.setBitmaps(mCurPageBitmap, mCurPageBitmap);
+        mPageWidget.setBitmaps(mNextPageBitmap, mNextPageBitmap);
+        mPageWidget.invalidate();
+        // mPageWidget.postInvalidate();
+    }
 
-			case TEXTSET:
-				pagefactory.changBackGround(msg.arg1);
-				pagefactory.onDraw(mCurPageCanvas);
-				mPageWidget.postInvalidate();
-				break;
+    private void creatIsExit() {
+        Dialog dialog = new AlertDialog.Builder(BookActivity.this).setTitle("æç¤º").setMessage("æ˜¯å¦ç¡®è®¤é€€å‡ºï¼Ÿç¡®å®šå—ï¼ŒçœŸçš„å—").setPositiveButton("ç¡®å®š", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                dialog.cancel();
+                finish();
+            }
+        }).setNegativeButton("å–æ¶ˆ", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        }).create();// åˆ›å»ºæŒ‰é’®
+        dialog.show();
+    }
 
-			case OPENMARK:
-				try {
-					mCursor = db.select();
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // pagefactory.createLog();
+        // System.out.println("TabHost_Index.java onKeyDown");
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            addBookMark();
+            this.finish();
+            // if(isExit == false ) {
+            // isExit = true;
+            // Toast.makeText(this, "å†æŒ‰ä¸€æ¬¡åŽé€€é”®é€€å‡ºåº”ç”¨ç¨‹åº",
+            // Toast.LENGTH_SHORT).show();
+            // if(!hasTask) {
+            // tExit.schedule(task, 2000);
+            // }
+            // } else {
+            // finish();
+            // System.exit(0);
+            // }
+        }
+        return false;
+    }
 
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				if (mCursor.getCount() > 0) {
-					mCursor.moveToPosition(mCursor.getCount() - 1);
-					String pos = mCursor.getString(2);
-					String tmp = mCursor.getString(1);
-
-					pagefactory.setBeginPos(Integer.valueOf(pos));
-					try {
-						pagefactory.prePage();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					pagefactory.onDraw(mNextPageCanvas);
-					mPageWidget.setBitmaps(mCurPageBitmap, mNextPageBitmap);
-					mPageWidget.invalidate();
-					db.close();
-				}
-				break;
-
-			case SAVEMARK:
-				try {
-					db.update(book.id, book.bookname, String.valueOf(msg.arg2));
-					db.updateSetup(setup.id, String.valueOf(msg.arg1), "0", "0");
-					// mCursor = db.select();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-				// System.out.println(mCursor.getCount());
-				// if (mCursor.getCount() > 0) {
-				// mCursor.moveToPosition(mCursor.getCount()-1);
-				// db.update(book.id, book.bookname,
-				// String.valueOf(msg.arg2),String.valueOf(msg.arg1));
-				// } else {
-				// db.insert("",
-				// String.valueOf(msg.arg2),String.valueOf(msg.arg1));
-				// }
-				db.close();
-				break;
-
-			default:
-				break;
-			}
-			super.handleMessage(msg);
-		}
-	};
+    // æ·»åŠ ä¹¦ç­¾
+    public void addBookMark() {
+        Message msg = new Message();
+        msg.what = SAVEMARK;
+        msg.arg1 = whichSize;
+        curPostion = pagefactory.getCurPostion();
+        msg.arg2 = curPostion;
+        mhHandler.sendMessage(msg);
+    }
 }

@@ -1,26 +1,5 @@
 package com.andorid.shu.love;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.os.Bundle;
-import android.view.*;
-import android.view.ContextMenu.ContextMenuInfo;
-import android.view.View.OnClickListener;
-import android.view.View.OnCreateContextMenuListener;
-import android.view.View.OnLongClickListener;
-import android.widget.BaseAdapter;
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.Toast;
-import com.android.filebrowser.ExternalStorageActivity;
-import com.sqlite.DbHelper;
-import com.xstd.ip.Tools;
-import com.xstd.lovereader.R;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -28,24 +7,84 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.View.OnCreateContextMenuListener;
+import android.view.View.OnLongClickListener;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import com.android.filebrowser.ExternalStorageActivity;
+import com.google.lovereader.R;
+import com.sqlite.DbHelper;
+import com.xstd.ip.Tools;
+
 public class LoveReaderActivity extends Activity {
 
-    private static Boolean isExit = false;// ÓÃÓÚÅĞ¶ÏÊÇ·ñÍÆ³ö
+    private static Boolean isExit = false;// ç”¨äºåˆ¤æ–­æ˜¯å¦æ¨å‡º
     private static Boolean hasTask = false;
+    TimerTask task = new TimerTask() {
+        @Override
+        public void run() {
+            isExit = false;
+            hasTask = true;
+        }
+    };
+    final String[] font = new String[]{"20", "24", "26", "30", "32", "36", "40", "46", "50", "56", "60", "66", "70"};
+    private final int SPLASH_DISPLAY_LENGHT = 5000; // å»¶è¿Ÿäº”ç§’
+    private final int MENU_RENAME = Menu.FIRST;
+    int[] size = null;// å‡è®¾æ•°æ®
+    DbHelper db;
+    List<BookInfo> books;
+    int realTotalRow;
+    int bookNumber; // å›¾ä¹¦çš„æ•°é‡
+    // æ·»åŠ é•¿æŒ‰ç‚¹å‡»
+    OnCreateContextMenuListener listener = new OnCreateContextMenuListener() {
+        @Override
+        public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+            // menu.setHeaderTitle(String.valueOf(v.getId()));
+            menu.add(0, 0, v.getId(), "è¯¦ç»†ä¿¡æ¯");
+            menu.add(0, 1, v.getId(), "åˆ é™¤æœ¬ä¹¦");
+        }
+    };
+    // æ·»åŠ æœ‰ç±³å¹¿å‘Š
+    // private void addYoumi(){
+    // //åˆå§‹åŒ–å¹¿å‘Šè§†å›¾
+    // AdView adView = new AdView(this, Color.GRAY, Color.WHITE,200);
+    // FrameLayout.LayoutParams params = new
+    // FrameLayout.LayoutParams(FrameLayout.LayoutParams.FILL_PARENT,
+    // FrameLayout.LayoutParams.WRAP_CONTENT);
+    // //è®¾ç½®å¹¿å‘Šå‡ºç°çš„ä½ç½®(æ‚¬æµ®äºå±å¹•å³ä¸‹è§’)
+    // params.gravity=Gravity.BOTTOM|Gravity.RIGHT;
+    // //å°†å¹¿å‘Šè§†å›¾åŠ å…¥Activityä¸­
+    // addContentView(adView, params);
+    // }
+    Timer tExit = new Timer();
     private Context mContext;
     private ShelfAdapter mAdapter;
     private Button shelf_image_button;
     private ListView shelf_list;
     private Button buttontt;
-    int[] size = null;// ¼ÙÉèÊı¾İ
-    private final int SPLASH_DISPLAY_LENGHT = 5000; // ÑÓ³ÙÎåÃë
-    private String txtPath = "/sdcard/lovereader/ôÜÊÂ°Ù¿Æ.txt";
-    private final int MENU_RENAME = Menu.FIRST;
-    DbHelper db;
-    List<BookInfo> books;
-    int realTotalRow;
-    int bookNumber; // Í¼ÊéµÄÊıÁ¿
-    final String[] font = new String[]{"20", "24", "26", "30", "32", "36", "40", "46", "50", "56", "60", "66", "70"};
+    private String txtPath = "/sdcard/lovereader/ç³—äº‹ç™¾ç§‘.txt";
+
+    ;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -54,12 +93,12 @@ public class LoveReaderActivity extends Activity {
         setContentView(R.layout.shelf);
         db = new DbHelper(this);
         if (!copyFile()) {
-            // Toast.makeText(this, "µç×ÓÊé²»´æÔÚ£¡", Toast.LENGTH_SHORT).show();
+            // Toast.makeText(this, "ç”µå­ä¹¦ä¸å­˜åœ¨ï¼", Toast.LENGTH_SHORT).show();
         }
         mContext = this;
         init();
-        /************** ³õÊ¼»¯Êé¼ÜÍ¼Êé *********************/
-        books = db.getAllBookInfo();// È¡µÃËùÓĞµÄÍ¼Êé
+        /************** åˆå§‹åŒ–ä¹¦æ¶å›¾ä¹¦ *********************/
+        books = db.getAllBookInfo();// å–å¾—æ‰€æœ‰çš„å›¾ä¹¦
         bookNumber = books.size();
         int count = books.size();
         int totalRow = count / 3;
@@ -72,14 +111,176 @@ public class LoveReaderActivity extends Activity {
         }
         size = new int[totalRow];
         /***********************************/
-        mAdapter = new ShelfAdapter();// new adapter¶ÔÏó²ÅÄÜÓÃ
+        mAdapter = new ShelfAdapter();// new adapterå¯¹è±¡æ‰èƒ½ç”¨
         shelf_list.setAdapter(mAdapter);
-        // ×¢²áContextViewµ½viewÖĞ
+        // æ³¨å†ŒContextViewåˆ°viewä¸­
     }
 
     private void init() {
         shelf_image_button = (Button) findViewById(R.id.shelf_image_button);
         shelf_list = (ListView) findViewById(R.id.shelf_list);
+    }
+
+    @Override
+    public boolean onContextItemSelected(final MenuItem item) {
+        switch (item.getItemId()) {
+            case 0:
+
+                break;
+            case 1:
+                Dialog dialog = new AlertDialog.Builder(LoveReaderActivity.this).setTitle("æç¤º").setMessage("ç¡®è®¤è¦åˆ é™¤å—ï¼Ÿ").setPositiveButton("ç¡®å®š", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int whichButton) {
+                        BookInfo book = db.getBookInfo(item.getOrder());
+                        File dest = new File("/sdcard/lovereader/" + book.bookname);
+                        db.delete(item.getOrder());
+                        if (dest.exists()) {
+                            dest.delete();
+                            Toast.makeText(mContext, "åˆ é™¤æˆåŠŸ", Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(mContext, "ç£ç›˜æ–‡ä»¶åˆ é™¤å¤±è´¥", Toast.LENGTH_SHORT).show();
+                        }
+                        refreshShelf();
+                    }
+                }).setNegativeButton("å–æ¶ˆ", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.cancel();
+                    }
+                }).create();// åˆ›å»ºæŒ‰é’®
+                dialog.show();
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == 222) {
+            String isImport = data.getStringExtra("isImport");
+            if ("1".equals(isImport)) {
+                refreshShelf();
+            }
+        }
+    }
+
+    // é‡æ–°åŠ è½½ä¹¦æ¶
+    public void refreshShelf() {
+        /************** åˆå§‹åŒ–ä¹¦æ¶å›¾ä¹¦ *********************/
+        books = db.getAllBookInfo();// å–å¾—æ‰€æœ‰çš„å›¾ä¹¦
+        bookNumber = books.size();
+        int count = books.size();
+        int totalRow = count / 3;
+        if (count % 3 > 0) {
+            totalRow = count / 3 + 1;
+        }
+        realTotalRow = totalRow;
+        if (totalRow < 4) {
+            totalRow = 4;
+        }
+        size = new int[totalRow];
+        /***********************************/
+        mAdapter = new ShelfAdapter();// new adapterå¯¹è±¡æ‰èƒ½ç”¨
+        shelf_list.setAdapter(mAdapter);
+    }
+
+    protected boolean copyFile() {
+        try {
+            String dst = txtPath;
+            File outFile = new File(dst);
+            if (!outFile.exists()) {
+                File destDir = new File("/sdcard/lovereader");
+                if (!destDir.exists()) {
+                    destDir.mkdirs();
+                }
+                InputStream inStream = getResources().openRawResource(R.raw.text);
+                outFile.createNewFile();
+                FileOutputStream fs = new FileOutputStream(outFile);
+                byte[] buffer = new byte[1024 * 1024];// 1MB
+                int byteread = 0;
+                while ((byteread = inStream.read(buffer)) != -1) {
+                    fs.write(buffer, 0, byteread);
+                }
+                inStream.close();
+                fs.close();
+                // db.insert("test.txt", "0","40");
+                // db.close();
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // pagefactory.createLog();
+        // System.out.println("TabHost_Index.java onKeyDown");
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (isExit == false) {
+                isExit = true;
+                Toast.makeText(this, R.string.exit_msg, Toast.LENGTH_SHORT).show();
+                if (!hasTask) {
+                    tExit.schedule(task, 2000);
+                }
+            } else {
+                finish();
+                System.exit(0);
+            }
+        }
+        return false;
+    }
+
+    public boolean onCreateOptionsMenu(Menu menu) {// åˆ›å»ºèœå•
+        super.onCreateOptionsMenu(menu);
+        // é€šè¿‡MenuInflaterå°†XML å®ä¾‹åŒ–ä¸º Menu Object
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {// æ“ä½œèœå•
+        int ID = item.getItemId();
+        switch (ID) {
+            case R.id.mainexit:
+                creatIsExit();
+                break;
+            case R.id.addbook:
+                Intent i = new Intent();
+                i.setClass(LoveReaderActivity.this, ExternalStorageActivity.class);
+                startActivityForResult(i, 222);
+                // startActivity(new Intent(LoveReaderActivity.this, Main.class));
+                // finish();
+                break;
+            default:
+                break;
+
+        }
+        return true;
+    }
+
+    private void creatIsExit() {
+        Dialog dialog = new AlertDialog.Builder(LoveReaderActivity.this).setTitle("æç¤º").setMessage("æ˜¯å¦è¦ç¡®è®¤LoverReaderï¼Ÿ").setPositiveButton("ç¡®å®š", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int whichButton) {
+                // dialog.cancel();
+                // finish();
+                LoveReaderActivity.this.finish();
+                android.os.Process.killProcess(android.os.Process.myPid());
+                System.exit(0);
+            }
+        }).setNegativeButton("å–æ¶ˆ", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        }).create();// åˆ›å»ºæŒ‰é’®
+        dialog.show();
     }
 
     public class ShelfAdapter extends BaseAdapter {
@@ -154,81 +355,6 @@ public class LoveReaderActivity extends Activity {
         }
     }
 
-    ;
-
-    // Ìí¼Ó³¤°´µã»÷
-    OnCreateContextMenuListener listener = new OnCreateContextMenuListener() {
-        @Override
-        public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-            // menu.setHeaderTitle(String.valueOf(v.getId()));
-            menu.add(0, 0, v.getId(), "ÏêÏ¸ĞÅÏ¢");
-            menu.add(0, 1, v.getId(), "É¾³ı±¾Êé");
-        }
-    };
-
-    @Override
-    public boolean onContextItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-            case 0:
-
-                break;
-            case 1:
-                Dialog dialog = new AlertDialog.Builder(LoveReaderActivity.this).setTitle("ÌáÊ¾").setMessage("È·ÈÏÒªÉ¾³ıÂğ£¿").setPositiveButton("È·¶¨", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int whichButton) {
-                        BookInfo book = db.getBookInfo(item.getOrder());
-                        File dest = new File("/sdcard/lovereader/" + book.bookname);
-                        db.delete(item.getOrder());
-                        if (dest.exists()) {
-                            dest.delete();
-                            Toast.makeText(mContext, "É¾³ı³É¹¦", Toast.LENGTH_SHORT).show();
-                        } else {
-                            Toast.makeText(mContext, "´ÅÅÌÎÄ¼şÉ¾³ıÊ§°Ü", Toast.LENGTH_SHORT).show();
-                        }
-                        refreshShelf();
-                    }
-                }).setNegativeButton("È¡Ïû", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                }).create();// ´´½¨°´Å¥
-                dialog.show();
-                break;
-            default:
-                break;
-        }
-        return true;
-    }
-
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == 222) {
-            String isImport = data.getStringExtra("isImport");
-            if ("1".equals(isImport)) {
-                refreshShelf();
-            }
-        }
-    }
-
-    // ÖØĞÂ¼ÓÔØÊé¼Ü
-    public void refreshShelf() {
-        /************** ³õÊ¼»¯Êé¼ÜÍ¼Êé *********************/
-        books = db.getAllBookInfo();// È¡µÃËùÓĞµÄÍ¼Êé
-        bookNumber = books.size();
-        int count = books.size();
-        int totalRow = count / 3;
-        if (count % 3 > 0) {
-            totalRow = count / 3 + 1;
-        }
-        realTotalRow = totalRow;
-        if (totalRow < 4) {
-            totalRow = 4;
-        }
-        size = new int[totalRow];
-        /***********************************/
-        mAdapter = new ShelfAdapter();// new adapter¶ÔÏó²ÅÄÜÓÃ
-        shelf_list.setAdapter(mAdapter);
-    }
-
     public class ButtonOnClick implements OnClickListener {
         @Override
         public void onClick(View v) {
@@ -244,130 +370,10 @@ public class LoveReaderActivity extends Activity {
     public class ButtonOnLongClick implements OnLongClickListener {
         @Override
         public boolean onLongClick(View v) {
-            // Toast.makeText(mContext, "ÔÙ°´Ò»´ÎºóÍË¼üÍË³öÓ¦ÓÃ³ÌĞò",
+            // Toast.makeText(mContext, "å†æŒ‰ä¸€æ¬¡åé€€é”®é€€å‡ºåº”ç”¨ç¨‹åº",
             // Toast.LENGTH_SHORT).show();
 
             return true;
         }
-    }
-
-    protected boolean copyFile() {
-        try {
-            String dst = txtPath;
-            File outFile = new File(dst);
-            if (!outFile.exists()) {
-                File destDir = new File("/sdcard/lovereader");
-                if (!destDir.exists()) {
-                    destDir.mkdirs();
-                }
-                InputStream inStream = getResources().openRawResource(R.raw.text);
-                outFile.createNewFile();
-                FileOutputStream fs = new FileOutputStream(outFile);
-                byte[] buffer = new byte[1024 * 1024];// 1MB
-                int byteread = 0;
-                while ((byteread = inStream.read(buffer)) != -1) {
-                    fs.write(buffer, 0, byteread);
-                }
-                inStream.close();
-                fs.close();
-                // db.insert("test.txt", "0","40");
-                // db.close();
-            }
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    // Ìí¼ÓÓĞÃ×¹ã¸æ
-    // private void addYoumi(){
-    // //³õÊ¼»¯¹ã¸æÊÓÍ¼
-    // AdView adView = new AdView(this, Color.GRAY, Color.WHITE,200);
-    // FrameLayout.LayoutParams params = new
-    // FrameLayout.LayoutParams(FrameLayout.LayoutParams.FILL_PARENT,
-    // FrameLayout.LayoutParams.WRAP_CONTENT);
-    // //ÉèÖÃ¹ã¸æ³öÏÖµÄÎ»ÖÃ(Ğü¸¡ÓÚÆÁÄ»ÓÒÏÂ½Ç)
-    // params.gravity=Gravity.BOTTOM|Gravity.RIGHT;
-    // //½«¹ã¸æÊÓÍ¼¼ÓÈëActivityÖĞ
-    // addContentView(adView, params);
-    // }
-    Timer tExit = new Timer();
-    TimerTask task = new TimerTask() {
-        @Override
-        public void run() {
-            isExit = false;
-            hasTask = true;
-        }
-    };
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // pagefactory.createLog();
-        // System.out.println("TabHost_Index.java onKeyDown");
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (isExit == false) {
-                isExit = true;
-                Toast.makeText(this, "ÔÙ°´Ò»´ÎºóÍË¼üÍË³öÓ¦ÓÃ³ÌĞò", Toast.LENGTH_SHORT).show();
-                if (!hasTask) {
-                    tExit.schedule(task, 2000);
-                }
-            } else {
-                finish();
-                System.exit(0);
-            }
-        }
-        return false;
-    }
-
-    public boolean onCreateOptionsMenu(Menu menu) {// ´´½¨²Ëµ¥
-        super.onCreateOptionsMenu(menu);
-        // Í¨¹ıMenuInflater½«XML ÊµÀı»¯Îª Menu Object
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.main_menu, menu);
-        return true;
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
-    public boolean onOptionsItemSelected(MenuItem item) {// ²Ù×÷²Ëµ¥
-        int ID = item.getItemId();
-        switch (ID) {
-            case R.id.mainexit:
-                creatIsExit();
-                break;
-            case R.id.addbook:
-                Intent i = new Intent();
-                i.setClass(LoveReaderActivity.this, ExternalStorageActivity.class);
-                startActivityForResult(i, 222);
-                // startActivity(new Intent(LoveReaderActivity.this, Main.class));
-                // finish();
-                break;
-            default:
-                break;
-
-        }
-        return true;
-    }
-
-    private void creatIsExit() {
-        Dialog dialog = new AlertDialog.Builder(LoveReaderActivity.this).setTitle("ÌáÊ¾").setMessage("ÊÇ·ñÒªÈ·ÈÏLoverReader£¿").setPositiveButton("È·¶¨", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int whichButton) {
-                // dialog.cancel();
-                // finish();
-                LoveReaderActivity.this.finish();
-                android.os.Process.killProcess(android.os.Process.myPid());
-                System.exit(0);
-            }
-        }).setNegativeButton("È¡Ïû", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        }).create();// ´´½¨°´Å¥
-        dialog.show();
     }
 }

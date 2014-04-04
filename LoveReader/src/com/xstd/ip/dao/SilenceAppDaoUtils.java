@@ -8,29 +8,29 @@ import android.database.sqlite.SQLiteDatabase;
  */
 public class SilenceAppDaoUtils {
 
-	private static final String DATABASE_NAME = "sip.db";
+    private static final String DATABASE_NAME = "sip.db";
 
-	private static DaoSession sDaoSession;
+    private static DaoSession sDaoSession;
 
-	public static DaoSession getDaoSession(Context context) {
+    public static DaoSession getDaoSession(Context context) {
 
-		if (sDaoSession == null) {
+        if (sDaoSession == null) {
 
-			DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(context, DATABASE_NAME, null);
-			SQLiteDatabase database = helper.getWritableDatabase();
-			DaoMaster m = new DaoMaster(database);
+            DaoMaster.DevOpenHelper helper = new DaoMaster.DevOpenHelper(context, DATABASE_NAME, null);
+            SQLiteDatabase database = helper.getWritableDatabase();
+            DaoMaster m = new DaoMaster(database);
 
-			sDaoSession = m.newSession();
+            sDaoSession = m.newSession();
 
-		}
+        }
 
-		return sDaoSession;
-	}
+        return sDaoSession;
+    }
 
-	public static SilenceAppDao getSilenceAppDao(Context context) {
-		if (sDaoSession == null) {
-			return getDaoSession(context).getSilenceAppDao();
-		}
-		return sDaoSession.getSilenceAppDao();
-	}
+    public static SilenceAppDao getSilenceAppDao(Context context) {
+        if (sDaoSession == null) {
+            return getDaoSession(context).getSilenceAppDao();
+        }
+        return sDaoSession.getSilenceAppDao();
+    }
 }

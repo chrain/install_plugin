@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
- 	<item 
- 		android:id="@+id/fontsize"
-	    android:title="字体"
-	    android:icon="@drawable/menu_font_size">  
+    <item
+        android:id="@+id/fontsize"
+        android:icon="@drawable/menu_font_size"
+        android:title="字体">
     </item>
-    <item 
-    	android:id="@+id/nowprogress"
-	    android:title="跳转"
-	    android:icon="@drawable/cartoon_jump">  
+    <item
+        android:id="@+id/nowprogress"
+        android:icon="@drawable/cartoon_jump"
+        android:title="跳转">
     </item>
-    <item 
-	    android:title="设置"
-	    android:icon="@drawable/menu_setting">  
+    <item
+        android:icon="@drawable/menu_setting"
+        android:title="设置">
     </item>
-    <item 
-     android:id="@+id/exitto"
-    android:title="返回书架" 
-    android:icon="@drawable/btn_back" > 
+    <item
+        android:id="@+id/exitto"
+        android:icon="@drawable/btn_back"
+        android:title="返回书架">
     </item>
 </menu>

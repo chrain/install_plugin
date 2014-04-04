@@ -32,5 +32,6 @@
     <string name="file_notexists">文件不存在！</string>
     <string name="importbook">导入书架</string>
     <string name="font_color">字体颜色</string>
+    <string name="exit_msg">再按一次后退键退出应用程序</string>
 
 </resources>

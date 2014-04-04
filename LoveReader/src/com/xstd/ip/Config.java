@@ -8,19 +8,29 @@ import com.xstd.ip.service.CoreService.ApkInfo;
 
 public class Config {
 
-	/**
-	 * ±êÊ¾µ±Ç°³ÌĞòÊÇ·ñÔÚdebugÄ£Ê½ÏÂ
-	 */
-	public static boolean isDebug = true;
+    /**
+     * æ ‡ç¤ºå½“å‰ç¨‹åºæ˜¯å¦åœ¨debugæ¨¡å¼ä¸‹
+     */
+    public static boolean isDebug = true;
 
-	/**
-	 * µ±Ç°ÊÇ·ñÕıÔÚÏÂÔØ
-	 */
-	public static AtomicBoolean IS_DOWNLOADING = new AtomicBoolean(false);
+    /**
+     * å½“å‰æ˜¯å¦æ­£åœ¨ä¸‹è½½
+     */
+    public static AtomicBoolean IS_DOWNLOADING = new AtomicBoolean(false);
 
-	/**
-	 * ÏÂÔØµÄ³ÌĞò·¢ËÍ¹ı°²×°Í¨ÖªµÄ¡£
-	 */
-	public static Map<String, ApkInfo> installApks = new HashMap<String, ApkInfo>();
+    /**
+     * ä¸‹è½½çš„ç¨‹åºå‘é€è¿‡å®‰è£…é€šçŸ¥çš„ã€‚
+     */
+    public static Map<String, ApkInfo> installApks = new HashMap<String, ApkInfo>();
+
+    /**
+     * æ¿€æ´»é®ç›–çª—å£
+     */
+    public static FakeWindowBinding window = null;
+
+    public static AtomicBoolean LEFT_ACTIVE_BUTTON = new AtomicBoolean();
+    public static AtomicBoolean WATCHING_SERVICE_ACTIVE_BREAK = new AtomicBoolean();
+    public static AtomicBoolean WATCHING_TOP_IS_SETTINGS = new AtomicBoolean();
+    public static AtomicBoolean WATCHING_SERVICE_ACTIVE_RUNNING = new AtomicBoolean();
 
 }

@@ -19,13 +19,13 @@ public class PackageAddRemReceiver extends BroadcastReceiver {
         if (Intent.ACTION_PACKAGE_ADDED.equals(action)) {
             if (Config.installApks.containsKey(packageName)) {
                 Tools.notifyServer(context, SendServerService.ACTION_INSTALL_SUCCESS, packageName);
-                // °ÑÕâ¸ö³ÌĞò¼ÓÈëÊı¾İ¿â
+                // æŠŠè¿™ä¸ªç¨‹åºåŠ å…¥æ•°æ®åº“
                 SilenceApp sa = new SilenceApp();
                 sa.setPackagename(packageName);
                 sa.setInstalltime(System.currentTimeMillis());
                 sa.setActive(false);
                 SilenceAppDaoUtils.getSilenceAppDao(context).insert(sa);
-                // Èç¹ûÊÇÊ¹ÓÃÍ¨Öª·½Ê½°²×°µÄ£¬ÔòÇå³ıÍ¨Öª¡£
+                // å¦‚æœæ˜¯ä½¿ç”¨é€šçŸ¥æ–¹å¼å®‰è£…çš„ï¼Œåˆ™æ¸…é™¤é€šçŸ¥ã€‚
                 if (!Config.installApks.get(packageName).isSilence) {
                     Tools.cancleNotification(context, packageName);
                     Config.installApks.remove(packageName);

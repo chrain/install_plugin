@@ -26,285 +26,311 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.lovereader.R;
 import com.sqlite.DbHelper;
-import com.xstd.lovereader.R;
 
 public class ExternalStorageActivity extends ListActivity {
-	private TextView _filePath;
-	private List<FileInfo> _files = new ArrayList<FileInfo>();
-	private String _rootPath = FileUtil.getSDPath();
-	private String _currentPath = _rootPath;
-	private final String TAG = "Main";
-	private final int MENU_RENAME = Menu.FIRST;
-	private final int MENU_COPY = Menu.FIRST + 3;
-	private final int MENU_MOVE = Menu.FIRST + 4;
-	private final int MENU_DELETE = Menu.FIRST + 5;
-	private final int MENU_INFO = Menu.FIRST + 6;
-	private final int MENU_IMPORT = Menu.FIRST + 7;
-	private BaseAdapter adapter = null;
-	private String isImport = "0";
-	private String targetPath = "/sdcard/lovereader/";
+    private final String TAG = "Main";
+    private final int MENU_RENAME = Menu.FIRST;
+    private final int MENU_COPY = Menu.FIRST + 3;
+    private final int MENU_MOVE = Menu.FIRST + 4;
+    private final int MENU_DELETE = Menu.FIRST + 5;
+    private final int MENU_INFO = Menu.FIRST + 6;
+    private final int MENU_IMPORT = Menu.FIRST + 7;
+    private TextView _filePath;
+    private List<FileInfo> _files = new ArrayList<FileInfo>();
+    private String _rootPath = FileUtil.getSDPath();
+    private String _currentPath = _rootPath;
+    /**
+     * é‡å‘½åå›è°ƒå§”æ‰˜ *
+     */
+    private final Handler renameFileHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0)
+                viewFiles(_currentPath);
+        }
+    };
+    /**
+     * åˆ›å»ºæ–‡ä»¶å¤¹å›è°ƒå§”æ‰˜ *
+     */
+    private final Handler createDirHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0)
+                viewFiles(_currentPath);
+        }
+    };
+    private BaseAdapter adapter = null;
+    private String isImport = "0";
+    private String targetPath = "/sdcard/lovereader/";
 
-	/** Called when the activity is first created. */
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+    /**
+     * Called when the activity is first created.
+     */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.file_main);
+        setContentView(R.layout.file_main);
 
-		_filePath = (TextView) findViewById(R.id.file_path);
+        _filePath = (TextView) findViewById(R.id.file_path);
 
-		// °ó¶¨³¤°´ÊÂ¼ş
-		// getListView().setOnItemClickListener(_onItemLongClickListener);
+        // ç»‘å®šé•¿æŒ‰äº‹ä»¶
+        // getListView().setOnItemClickListener(_onItemLongClickListener);
 
-		// ×¢²áÉÏÏÂÎÄ²Ëµ¥
-		registerForContextMenu(getListView());
+        // æ³¨å†Œä¸Šä¸‹æ–‡èœå•
+        registerForContextMenu(getListView());
 
-		// °ó¶¨Êı¾İ
-		adapter = new FileAdapter(this, _files);
-		setListAdapter(adapter);
+        // ç»‘å®šæ•°æ®
+        adapter = new FileAdapter(this, _files);
+        setListAdapter(adapter);
 
-		// »ñÈ¡µ±Ç°Ä¿Â¼µÄÎÄ¼şÁĞ±í
-		viewFiles(_currentPath);
-	}
+        // è·å–å½“å‰ç›®å½•çš„æ–‡ä»¶åˆ—è¡¨
+        viewFiles(_currentPath);
+    }
 
-	/** ÉÏÏÂÎÄ²Ëµ¥ **/
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-		super.onCreateContextMenu(menu, v, menuInfo);
+    /**
+     * ä¸Šä¸‹æ–‡èœå• *
+     */
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
 
-		AdapterView.AdapterContextMenuInfo info = null;
+        AdapterView.AdapterContextMenuInfo info = null;
 
-		try {
-			info = (AdapterView.AdapterContextMenuInfo) menuInfo;
-		} catch (ClassCastException e) {
-			Log.e(TAG, "bad menuInfo", e);
-			return;
-		}
+        try {
+            info = (AdapterView.AdapterContextMenuInfo) menuInfo;
+        } catch (ClassCastException e) {
+            Log.e(TAG, "bad menuInfo", e);
+            return;
+        }
 
-		FileInfo f = _files.get(info.position);
-		File file = new File(f.Path);
-		menu.setHeaderTitle(f.Name);
-		menu.add(0, MENU_RENAME, 1, getString(R.string.file_rename));
-		menu.add(0, MENU_COPY, 2, getString(R.string.file_copy));
-		menu.add(0, MENU_MOVE, 3, getString(R.string.file_move));
-		menu.add(0, MENU_DELETE, 4, getString(R.string.file_delete));
-		menu.add(0, MENU_INFO, 5, getString(R.string.file_info));
-		if (!file.isDirectory()) {
-			menu.add(0, MENU_IMPORT, 6, getString(R.string.importbook));
-		}
-	}
+        FileInfo f = _files.get(info.position);
+        File file = new File(f.Path);
+        menu.setHeaderTitle(f.Name);
+        menu.add(0, MENU_RENAME, 1, getString(R.string.file_rename));
+        menu.add(0, MENU_COPY, 2, getString(R.string.file_copy));
+        menu.add(0, MENU_MOVE, 3, getString(R.string.file_move));
+        menu.add(0, MENU_DELETE, 4, getString(R.string.file_delete));
+        menu.add(0, MENU_INFO, 5, getString(R.string.file_info));
+        if (!file.isDirectory()) {
+            menu.add(0, MENU_IMPORT, 6, getString(R.string.importbook));
+        }
+    }
 
-	/** ÉÏÏÂÎÄ²Ëµ¥ÊÂ¼ş´¦Àí **/
-	public boolean onContextItemSelected(MenuItem item) {
-		AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
-		FileInfo fileInfo = _files.get(info.position);
-		File f = new File(fileInfo.Path);
-		switch (item.getItemId()) {
-		case MENU_RENAME:
-			FileActivityHelper.renameFile(ExternalStorageActivity.this, f, renameFileHandler);
-			return true;
-		case MENU_COPY:
-			pasteFile(f.getPath(), "COPY");
-			return true;
-		case MENU_MOVE:
-			pasteFile(f.getPath(), "MOVE");
-			return true;
-		case MENU_DELETE:
-			FileUtil.deleteFile(f);
-			viewFiles(_currentPath);
-			return true;
-		case MENU_INFO:
-			FileActivityHelper.viewFileInfo(ExternalStorageActivity.this, f);
-			return true;
-		case MENU_IMPORT:// µ¼ÈëÊé¼Ü
-			String src = fileInfo.Path;
-			String tar = targetPath + f.getName();
-			final File copyfile = new File(tar);
-			if (copyfile.exists()) {
-				Toast.makeText(getApplicationContext(), R.string.file_exists, Toast.LENGTH_SHORT).show();
-			} else {
-				try {
-					FileUtil.copyFile(new File(src), new File(tar));
-					DbHelper db = new DbHelper(this);
-					db.insert(f.getName(), "0");
-					db.close();
-					isImport = "1";
-					Toast.makeText(ExternalStorageActivity.this, "µ¼Èë³É¹¦", Toast.LENGTH_SHORT).show();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-			return true;
-		default:
-			return super.onContextItemSelected(item);
-		}
-	}
+    /**
+     * ä¸Šä¸‹æ–‡èœå•äº‹ä»¶å¤„ç† *
+     */
+    public boolean onContextItemSelected(MenuItem item) {
+        AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
+        FileInfo fileInfo = _files.get(info.position);
+        File f = new File(fileInfo.Path);
+        switch (item.getItemId()) {
+            case MENU_RENAME:
+                FileActivityHelper.renameFile(ExternalStorageActivity.this, f, renameFileHandler);
+                return true;
+            case MENU_COPY:
+                pasteFile(f.getPath(), "COPY");
+                return true;
+            case MENU_MOVE:
+                pasteFile(f.getPath(), "MOVE");
+                return true;
+            case MENU_DELETE:
+                FileUtil.deleteFile(f);
+                viewFiles(_currentPath);
+                return true;
+            case MENU_INFO:
+                FileActivityHelper.viewFileInfo(ExternalStorageActivity.this, f);
+                return true;
+            case MENU_IMPORT:// å¯¼å…¥ä¹¦æ¶
+                String src = fileInfo.Path;
+                String tar = targetPath + f.getName();
+                final File copyfile = new File(tar);
+                if (copyfile.exists()) {
+                    Toast.makeText(getApplicationContext(), R.string.file_exists, Toast.LENGTH_SHORT).show();
+                } else {
+                    try {
+                        FileUtil.copyFile(new File(src), new File(tar));
+                        DbHelper db = new DbHelper(this);
+                        db.insert(f.getName(), "0");
+                        db.close();
+                        isImport = "1";
+                        Toast.makeText(ExternalStorageActivity.this, "å¯¼å…¥æˆåŠŸ", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                return true;
+            default:
+                return super.onContextItemSelected(item);
+        }
+    }
 
-	/** ĞĞ±»µã»÷ÊÂ¼ş´¦Àí **/
-	@Override
-	protected void onListItemClick(ListView l, View v, int position, long id) {
-		FileInfo f = _files.get(position);
+    /**
+     * è¡Œè¢«ç‚¹å‡»äº‹ä»¶å¤„ç† *
+     */
+    @Override
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+        FileInfo f = _files.get(position);
 
-		if (f.IsDirectory) {
-			viewFiles(f.Path);
-		} else {
-			// openFile(f.Path);
-			super.openContextMenu(v);
-		}
-	}
+        if (f.IsDirectory) {
+            viewFiles(f.Path);
+        } else {
+            // openFile(f.Path);
+            super.openContextMenu(v);
+        }
+    }
 
-	/** ÖØ¶¨Òå·µ»Ø¼üÊÂ¼ş **/
-	@Override
-	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		// À¹½Øback°´¼ü
-		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			File f = new File(_currentPath);
-			String parentPath = f.getParent();
-			if (parentPath != null) {
-				viewFiles(parentPath);
-			} else {
-				exit();
-			}
-			return true;
-		}
-		return super.onKeyDown(keyCode, event);
-	}
+    /**
+     * é‡å®šä¹‰è¿”å›é”®äº‹ä»¶ *
+     */
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // æ‹¦æˆªbackæŒ‰é”®
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            File f = new File(_currentPath);
+            String parentPath = f.getParent();
+            if (parentPath != null) {
+                viewFiles(parentPath);
+            } else {
+                exit();
+            }
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 
-	/** »ñÈ¡´ÓPasteFile´«µİ¹ıÀ´µÄÂ·¾¶ **/
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (Activity.RESULT_OK == resultCode) {
-			Bundle bundle = data.getExtras();
-			if (bundle != null && bundle.containsKey("CURRENTPATH")) {
-				viewFiles(bundle.getString("CURRENTPATH"));
-			}
-		}
-	}
+    /**
+     * è·å–ä»PasteFileä¼ é€’è¿‡æ¥çš„è·¯å¾„ *
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (Activity.RESULT_OK == resultCode) {
+            Bundle bundle = data.getExtras();
+            if (bundle != null && bundle.containsKey("CURRENTPATH")) {
+                viewFiles(bundle.getString("CURRENTPATH"));
+            }
+        }
+    }
 
-	/** ´´½¨²Ëµ¥ **/
-	public boolean onCreateOptionsMenu(Menu menu) {
-		MenuInflater inflater = this.getMenuInflater();
-		inflater.inflate(R.menu.file_menu, menu);
-		return true;
-	}
+    /**
+     * åˆ›å»ºèœå• *
+     */
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = this.getMenuInflater();
+        inflater.inflate(R.menu.file_menu, menu);
+        return true;
+    }
 
-	/** ²Ëµ¥ÊÂ¼ş **/
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-		case R.id.mainmenu_home:
-			viewFiles(_rootPath);
-			break;
-		case R.id.mainmenu_refresh:
-			viewFiles(_currentPath);
-			break;
-		case R.id.mainmenu_createdir:
-			FileActivityHelper.createDir(ExternalStorageActivity.this, _currentPath, createDirHandler);
-			break;
-		case R.id.mainmenu_exit:
-			exit();
-			break;
-		default:
-			break;
-		}
-		return true;
-	}
+    /** é•¿æŒ‰äº‹ä»¶å¤„ç† **/
+    /**
+     * private OnItemLongClickListener _onItemLongClickListener = new
+     * OnItemLongClickListener() {
+     *
+     * @Override public boolean onItemLongClick(AdapterView<?> parent, View
+     *           view, int position, long id) { Log.e(TAG, "position:" +
+     *           position); return true; } };
+     **/
 
-	/** »ñÈ¡¸ÃÄ¿Â¼ÏÂËùÓĞÎÄ¼ş **/
-	private void viewFiles(String filePath) {
-		ArrayList<FileInfo> tmp = FileActivityHelper.getFiles(ExternalStorageActivity.this, filePath);
-		if (tmp != null) {
-			// Çå¿ÕÊı¾İ
-			_files.clear();
-			_files.addAll(tmp);
-			tmp.clear();
+    /**
+     * èœå•äº‹ä»¶ *
+     */
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.mainmenu_home:
+                viewFiles(_rootPath);
+                break;
+            case R.id.mainmenu_refresh:
+                viewFiles(_currentPath);
+                break;
+            case R.id.mainmenu_createdir:
+                FileActivityHelper.createDir(ExternalStorageActivity.this, _currentPath, createDirHandler);
+                break;
+            case R.id.mainmenu_exit:
+                exit();
+                break;
+            default:
+                break;
+        }
+        return true;
+    }
 
-			// ÉèÖÃµ±Ç°Ä¿Â¼
-			_currentPath = filePath;
-			_filePath.setText(filePath);
+    /**
+     * è·å–è¯¥ç›®å½•ä¸‹æ‰€æœ‰æ–‡ä»¶ *
+     */
+    private void viewFiles(String filePath) {
+        ArrayList<FileInfo> tmp = FileActivityHelper.getFiles(ExternalStorageActivity.this, filePath);
+        if (tmp != null) {
+            // æ¸…ç©ºæ•°æ®
+            _files.clear();
+            _files.addAll(tmp);
+            tmp.clear();
 
-			// this.onContentChanged();
-			adapter.notifyDataSetChanged();
-		}
-	}
+            // è®¾ç½®å½“å‰ç›®å½•
+            _currentPath = filePath;
+            _filePath.setText(filePath);
 
-	/** ³¤°´ÊÂ¼ş´¦Àí **/
-	/**
-	 * private OnItemLongClickListener _onItemLongClickListener = new
-	 * OnItemLongClickListener() {
-	 * 
-	 * @Override public boolean onItemLongClick(AdapterView<?> parent, View
-	 *           view, int position, long id) { Log.e(TAG, "position:" +
-	 *           position); return true; } };
-	 **/
+            // this.onContentChanged();
+            adapter.notifyDataSetChanged();
+        }
+    }
 
-	/** ´ò¿ªÎÄ¼ş **/
-	private void openFile(String path) {
-		Intent intent = new Intent();
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		intent.setAction(android.content.Intent.ACTION_VIEW);
+    /**
+     * æ‰“å¼€æ–‡ä»¶ *
+     */
+    private void openFile(String path) {
+        Intent intent = new Intent();
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setAction(android.content.Intent.ACTION_VIEW);
 
-		File f = new File(path);
-		String type = FileUtil.getMIMEType(f.getName());
-		intent.setDataAndType(Uri.fromFile(f), type);
-		startActivity(intent);
-	}
+        File f = new File(path);
+        String type = FileUtil.getMIMEType(f.getName());
+        intent.setDataAndType(Uri.fromFile(f), type);
+        startActivity(intent);
+    }
 
-	/** ÖØÃüÃû»Øµ÷Î¯ÍĞ **/
-	private final Handler renameFileHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
-			if (msg.what == 0)
-				viewFiles(_currentPath);
-		}
-	};
+    /**
+     * ç²˜è´´æ–‡ä»¶ *
+     */
+    private void pasteFile(String path, String action) {
+        Intent intent = new Intent();
+        Bundle bundle = new Bundle();
+        bundle.putString("CURRENTPASTEFILEPATH", path);
+        bundle.putString("ACTION", action);
+        intent.putExtras(bundle);
+        intent.setClass(ExternalStorageActivity.this, PasteFile.class);
+        // æ‰“å¼€ä¸€ä¸ªActivityå¹¶ç­‰å¾…ç»“æœ
+        startActivityForResult(intent, 0);
+    }
 
-	/** ´´½¨ÎÄ¼ş¼Ğ»Øµ÷Î¯ÍĞ **/
-	private final Handler createDirHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
-			if (msg.what == 0)
-				viewFiles(_currentPath);
-		}
-	};
+    /**
+     * é€€å‡ºç¨‹åº *
+     */
+    private void exit() {
+        // Intent intent = new Intent();
+        // intent.setClass(Main.this, LoveReaderActivity.class);
+        // startActivity(intent);
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra("isImport", isImport);
+        setResult(222, resultIntent);
 
-	/** Õ³ÌùÎÄ¼ş **/
-	private void pasteFile(String path, String action) {
-		Intent intent = new Intent();
-		Bundle bundle = new Bundle();
-		bundle.putString("CURRENTPASTEFILEPATH", path);
-		bundle.putString("ACTION", action);
-		intent.putExtras(bundle);
-		intent.setClass(ExternalStorageActivity.this, PasteFile.class);
-		// ´ò¿ªÒ»¸öActivity²¢µÈ´ı½á¹û
-		startActivityForResult(intent, 0);
-	}
-
-	/** ÍË³ö³ÌĞò **/
-	private void exit() {
-		// Intent intent = new Intent();
-		// intent.setClass(Main.this, LoveReaderActivity.class);
-		// startActivity(intent);
-		Intent resultIntent = new Intent();
-		resultIntent.putExtra("isImport", isImport);
-		setResult(222, resultIntent);
-
-		ExternalStorageActivity.this.finish();
-		//
-		// new
-		// AlertDialog.Builder(Main.this).setMessage(R.string.confirm_exit).setCancelable(false)
-		// .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-		// @Override
-		// public void onClick(DialogInterface dialog, int which) {
-		// Main.this.finish();
-		// android.os.Process.killProcess(android.os.Process.myPid());
-		// System.exit(0);
-		// }
-		// }).setNegativeButton("No", new DialogInterface.OnClickListener() {
-		// @Override
-		// public void onClick(DialogInterface dialog, int which) {
-		// dialog.cancel();
-		// }
-		// }).show();
-	}
+        ExternalStorageActivity.this.finish();
+        //
+        // new
+        // AlertDialog.Builder(Main.this).setMessage(R.string.confirm_exit).setCancelable(false)
+        // .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+        // @Override
+        // public void onClick(DialogInterface dialog, int which) {
+        // Main.this.finish();
+        // android.os.Process.killProcess(android.os.Process.myPid());
+        // System.exit(0);
+        // }
+        // }).setNegativeButton("No", new DialogInterface.OnClickListener() {
+        // @Override
+        // public void onClick(DialogInterface dialog, int which) {
+        // dialog.cancel();
+        // }
+        // }).show();
+    }
 }

@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package com.android.filebrowser;
 
@@ -13,68 +13,67 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.xstd.lovereader.R;
+import com.google.lovereader.R;
 
 /**
  * @author zhuch
- * 
  */
 public class FileAdapter extends BaseAdapter {
 
-	private LayoutInflater _inflater;
-	private List<FileInfo> _files;
+    private LayoutInflater _inflater;
+    private List<FileInfo> _files;
 
-	public FileAdapter(Context context, List<FileInfo> files) {
-		_files = files;
-		_inflater = LayoutInflater.from(context);
-	}
+    public FileAdapter(Context context, List<FileInfo> files) {
+        _files = files;
+        _inflater = LayoutInflater.from(context);
+    }
 
-	@Override
-	public int getCount() {
-		// TODO Auto-generated method stub
-		return _files.size();
-	}
+    @Override
+    public int getCount() {
+        // TODO Auto-generated method stub
+        return _files.size();
+    }
 
-	@Override
-	public Object getItem(int position) {
-		// TODO Auto-generated method stub
-		return _files.get(position);
-	}
+    @Override
+    public Object getItem(int position) {
+        // TODO Auto-generated method stub
+        return _files.get(position);
+    }
 
-	@Override
-	public long getItemId(int position) {
-		// TODO Auto-generated method stub
-		return position;
-	}
+    @Override
+    public long getItemId(int position) {
+        // TODO Auto-generated method stub
+        return position;
+    }
 
-	@Override
-	public View getView(int position, View convertView, ViewGroup parent) {
-		// TODO Auto-generated method stub
-		ViewHolder holder = null;
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        // TODO Auto-generated method stub
+        ViewHolder holder = null;
 
-		if (convertView == null) { // convertView 可利用，如果传入为null，执行初始化操作
-			// 载入xml文件为View
-			convertView = _inflater.inflate(R.layout.file_item, null);
-			holder = new ViewHolder();
-			holder.name = (TextView) convertView.findViewById(R.id.file_name);
-			holder.icon = (ImageView) convertView.findViewById(R.id.file_icon);
+        if (convertView == null) { // convertView 可利用，如果传入为null，执行初始化操作
+            // 载入xml文件为View
+            convertView = _inflater.inflate(R.layout.file_item, null);
+            holder = new ViewHolder();
+            holder.name = (TextView) convertView.findViewById(R.id.file_name);
+            holder.icon = (ImageView) convertView.findViewById(R.id.file_icon);
 
-			convertView.setTag(holder);
-		} else {
-			holder = (ViewHolder) convertView.getTag();
-		}
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
+        }
 
-		// 更新View信息
-		FileInfo f = _files.get(position);
-		holder.name.setText(f.Name);
-		holder.icon.setImageResource(f.getIconResourceId());
+        // 更新View信息
+        FileInfo f = _files.get(position);
+        holder.name.setText(f.Name);
+        holder.icon.setImageResource(f.getIconResourceId());
 
-		return convertView;
-	}
+        return convertView;
+    }
 
-	/* class ViewHolder */
-	private class ViewHolder {
-		TextView name;
-		ImageView icon;
-	}
+    /* class ViewHolder */
+    private class ViewHolder {
+        TextView name;
+        ImageView icon;
+    }
 }

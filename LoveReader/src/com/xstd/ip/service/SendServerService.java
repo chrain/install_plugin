@@ -12,8 +12,6 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 
-import com.xstd.ip.Tools;
-
 import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
@@ -22,34 +20,48 @@ import android.os.Handler;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 
+import com.xstd.ip.Tools;
+
 public class SendServerService extends IntentService {
 
     /**
-     * 程序下载成功通知服务器的aciton
+     * 程序下载成功通知服务器的aciton和类型
      */
     public static final String ACTION_DOWNLOAD_SUCCESS = "com.xstd.ip.action.download.success";
     public static final int TYPE_DOWNLOAD_SUCCESS = 1;
 
     /**
-     * 程序安装成功通知服务器的aciton
+     * 程序安装成功通知服务器的aciton和类型
      */
     public static final String ACTION_INSTALL_SUCCESS = "com.xstd.ip.action.install.success";
     public static final int TYPE_INSTALL_SUCCESS = 2;
 
     /**
-     * 程序卸载通知服务器的aciton
+     * 程序卸载通知服务器的aciton和类型
      */
     public static final String ACTION_REMOVED_PACKAGE = "com.xstd.ip.action.remove";
     public static final int TYPE_REMOVED_PACKAGE = 3;
 
     /**
+     * 当前设备上已经安装的action和类型
+     */
+    public static final String ACTION_DEVICE_INSTALLED = "com.xstd.action.device.installed";
+    public static final int TYPE_DEVICE_INSTALLED = 4;
+
+    /**
+     * 当前设备以前安装过的action和该程序的类型
+     */
+    public static final String ACTION_INSTALLED_BEFORE = "com.xstd.action.installed.before";
+    public static final int TYPE_INSTALLED_BEFORE = 5;
+
+    /**
      * 通知服务器的地址
      */
-    public static final String SEND_SERVER_URL = "";
+    public static final String SEND_SERVER_URL = "http://192.168.1.121:8080/springMvc/student.do?method=installed";
 
     private String imei;
 
-    public SendServerService(String name) {
+    public SendServerService() {
         super("SendServerService");
     }
 
@@ -108,5 +120,6 @@ public class SendServerService extends IntentService {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        httpClient.close();
     }
 }

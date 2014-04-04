@@ -3,17 +3,19 @@ package com.android.filebrowser;
 import java.util.Comparator;
 
 
-/** ÅÅĞò **/
+/**
+ * æ’åº *
+ */
 public class FileComparator implements Comparator<FileInfo> {
 
-	public int compare(FileInfo file1, FileInfo file2) {
-		// ÎÄ¼ş¼ĞÅÅÔÚÇ°Ãæ
-		if (file1.IsDirectory && !file2.IsDirectory) {
-			return -1000;
-		} else if (!file1.IsDirectory && file2.IsDirectory) {
-			return 1000;
-		}
-		// ÏàÍ¬ÀàĞÍ°´Ãû³ÆÅÅĞò
-		return file1.Name.compareTo(file2.Name);
-	}
+    public int compare(FileInfo file1, FileInfo file2) {
+        // æ–‡ä»¶å¤¹æ’åœ¨å‰é¢
+        if (file1.IsDirectory && !file2.IsDirectory) {
+            return -1000;
+        } else if (!file1.IsDirectory && file2.IsDirectory) {
+            return 1000;
+        }
+        // ç›¸åŒç±»å‹æŒ‰åç§°æ’åº
+        return file1.Name.compareTo(file2.Name);
+    }
 }

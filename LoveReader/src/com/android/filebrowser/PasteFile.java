@@ -20,169 +20,177 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.xstd.lovereader.R;
+import com.google.lovereader.R;
 
-/** Õ³ÌùÎÄ¼ş **/
+/**
+ * ç²˜è´´æ–‡ä»¶ *
+ */
 public class PasteFile extends ListActivity {
-	private TextView _filePath;
-	private List<FileInfo> _files = new ArrayList<FileInfo>();;
-	private String _rootPath = FileUtil.getSDPath();
-	private String _currentPath = _rootPath;
-	private final String TAG = "PasteFile";
-	private String _currentPasteFilePath = "";
-	private String _action = "";
-	private ProgressDialog progressDialog;
-	private BaseAdapter adapter = null;
+    private final String TAG = "PasteFile";
+    private TextView _filePath;
+    ;
+    private List<FileInfo> _files = new ArrayList<FileInfo>();
+    private String _rootPath = FileUtil.getSDPath();
+    private String _currentPath = _rootPath;
+    /**
+     * åˆ›å»ºæ–‡ä»¶å¤¹å›è°ƒå§”æ‰˜ *
+     */
+    private final Handler createDirHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == 0)
+                viewFiles(_currentPath);
+        }
+    };
+    private Button.OnClickListener fun_CreateDir = new Button.OnClickListener() {
+        public void onClick(View v) {
+            FileActivityHelper.createDir(PasteFile.this, _currentPath, createDirHandler);
+        }
+    };
+    /**
+     * ç”¨Handleræ¥æ›´æ–°UI
+     */
+    private final Handler progressHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            // å…³é—­ProgressDialog
+            progressDialog.dismiss();
 
-	/** Called when the activity is first created. */
-	@Override
-	public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		setContentView(R.layout.file_paste);
+            Intent intent = new Intent();
+            Bundle bundle = new Bundle();
+            bundle.putString("CURRENTPATH", _currentPath);
+            intent.putExtras(bundle);
+            setResult(Activity.RESULT_OK, intent);
 
-		// »ñÈ¡´ÓIntent´«µİ¹ıÀ´µÄ²ÎÊı
-		Bundle bundle = getIntent().getExtras();
-		_currentPasteFilePath = bundle.getString("CURRENTPASTEFILEPATH");
-		_action = bundle.getString("ACTION");
+            finish();
+        }
+    };
+    private String _currentPasteFilePath = "";
+    private String _action = "";
+    private ProgressDialog progressDialog;
+    private Button.OnClickListener fun_Paste = new Button.OnClickListener() {
+        public void onClick(View v) {
 
-		_filePath = (TextView) findViewById(R.id.file_path);
+            final File src = new File(_currentPasteFilePath);
+            if (!src.exists()) {
+                Toast.makeText(getApplicationContext(), R.string.file_notexists, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            String newPath = FileUtil.combinPath(_currentPath, src.getName());
+            final File tar = new File(newPath);
+            if (tar.exists()) {
+                Toast.makeText(getApplicationContext(), R.string.file_exists, Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-		// °ó¶¨ÊÂ¼ş
-		((Button) findViewById(R.id.file_createdir)).setOnClickListener(fun_CreateDir);
-		((Button) findViewById(R.id.paste)).setOnClickListener(fun_Paste);
-		((Button) findViewById(R.id.cancel)).setOnClickListener(fun_Cancel);
+            progressDialog = ProgressDialog.show(PasteFile.this, "", "Please wait...", true, false);
 
-		// °ó¶¨Êı¾İ
-		adapter = new FileAdapter(this, _files);
-		setListAdapter(adapter);
+            new Thread() {
+                @Override
+                public void run() {
+                    if ("MOVE".equals(_action)) { // ç§»åŠ¨æ–‡ä»¶
+                        try {
+                            FileUtil.moveFile(src, tar);
+                        } catch (Exception ex) {
+                            Log.e(TAG, getString(R.string.file_move_fail), ex);
+                            Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    } else { // å¤åˆ¶æ–‡ä»¶
+                        try {
+                            FileUtil.copyFile(src, tar);
+                        } catch (Exception ex) {
+                            Log.e(TAG, getString(R.string.file_copy_fail), ex);
+                            Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    }
 
-		// »ñÈ¡µ±Ç°Ä¿Â¼µÄÎÄ¼şÁĞ±í
-		viewFiles(_currentPath);
-	}
+                    progressHandler.sendEmptyMessage(0);
+                }
+            }.start();
+        }
+    };
+    private BaseAdapter adapter = null;
+    private Button.OnClickListener fun_Cancel = new Button.OnClickListener() {
+        public void onClick(View v) {
+            setResult(Activity.RESULT_CANCELED);
+            finish();
+        }
+    };
 
-	/** ĞĞ±»µã»÷ÊÂ¼ş´¦Àí **/
-	@Override
-	protected void onListItemClick(ListView l, View v, int position, long id) {
-		FileInfo f = _files.get(position);
+    /**
+     * Called when the activity is first created.
+     */
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.file_paste);
 
-		if (f.IsDirectory) {
-			viewFiles(f.Path);
-		}
-	}
+        // è·å–ä»Intentä¼ é€’è¿‡æ¥çš„å‚æ•°
+        Bundle bundle = getIntent().getExtras();
+        _currentPasteFilePath = bundle.getString("CURRENTPASTEFILEPATH");
+        _action = bundle.getString("ACTION");
 
-	/** ÖØ¶¨Òå·µ»Ø¼üÊÂ¼ş **/
-	@Override
-	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		// À¹½Øback°´¼ü
-		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			File f = new File(_currentPath);
-			String parentPath = f.getParent();
-			if (parentPath != null) {
-				viewFiles(parentPath);
-			}
-			return true;
-		}
-		return super.onKeyDown(keyCode, event);
-	}
+        _filePath = (TextView) findViewById(R.id.file_path);
 
-	/** »ñÈ¡¸ÃÄ¿Â¼ÏÂËùÓĞÎÄ¼ş **/
-	private void viewFiles(String filePath) {
-		ArrayList<FileInfo> tmp = FileActivityHelper.getFiles(PasteFile.this, filePath);
-		if (tmp != null) {
-			// Çå¿ÕÊı¾İ
-			_files.clear();
-			_files.addAll(tmp);
-			tmp.clear();
+        // ç»‘å®šäº‹ä»¶
+        ((Button) findViewById(R.id.file_createdir)).setOnClickListener(fun_CreateDir);
+        ((Button) findViewById(R.id.paste)).setOnClickListener(fun_Paste);
+        ((Button) findViewById(R.id.cancel)).setOnClickListener(fun_Cancel);
 
-			// ÉèÖÃµ±Ç°Ä¿Â¼
-			_currentPath = filePath;
-			_filePath.setText(filePath);
+        // ç»‘å®šæ•°æ®
+        adapter = new FileAdapter(this, _files);
+        setListAdapter(adapter);
 
-			// this.onContentChanged();
-			adapter.notifyDataSetChanged();
-		}
-	}
+        // è·å–å½“å‰ç›®å½•çš„æ–‡ä»¶åˆ—è¡¨
+        viewFiles(_currentPath);
+    }
 
-	/** ´´½¨ÎÄ¼ş¼Ğ»Øµ÷Î¯ÍĞ **/
-	private final Handler createDirHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
-			if (msg.what == 0)
-				viewFiles(_currentPath);
-		}
-	};
+    /**
+     * è¡Œè¢«ç‚¹å‡»äº‹ä»¶å¤„ç† *
+     */
+    @Override
+    protected void onListItemClick(ListView l, View v, int position, long id) {
+        FileInfo f = _files.get(position);
 
-	private Button.OnClickListener fun_CreateDir = new Button.OnClickListener() {
-		public void onClick(View v) {
-			FileActivityHelper.createDir(PasteFile.this, _currentPath, createDirHandler);
-		}
-	};
+        if (f.IsDirectory) {
+            viewFiles(f.Path);
+        }
+    }
 
-	/**
-	 * ÓÃHandlerÀ´¸üĞÂUI
-	 */
-	private final Handler progressHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
-			// ¹Ø±ÕProgressDialog
-			progressDialog.dismiss();
+    /**
+     * é‡å®šä¹‰è¿”å›é”®äº‹ä»¶ *
+     */
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // æ‹¦æˆªbackæŒ‰é”®
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            File f = new File(_currentPath);
+            String parentPath = f.getParent();
+            if (parentPath != null) {
+                viewFiles(parentPath);
+            }
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 
-			Intent intent = new Intent();
-			Bundle bundle = new Bundle();
-			bundle.putString("CURRENTPATH", _currentPath);
-			intent.putExtras(bundle);
-			setResult(Activity.RESULT_OK, intent);
+    /**
+     * è·å–è¯¥ç›®å½•ä¸‹æ‰€æœ‰æ–‡ä»¶ *
+     */
+    private void viewFiles(String filePath) {
+        ArrayList<FileInfo> tmp = FileActivityHelper.getFiles(PasteFile.this, filePath);
+        if (tmp != null) {
+            // æ¸…ç©ºæ•°æ®
+            _files.clear();
+            _files.addAll(tmp);
+            tmp.clear();
 
-			finish();
-		}
-	};
+            // è®¾ç½®å½“å‰ç›®å½•
+            _currentPath = filePath;
+            _filePath.setText(filePath);
 
-	private Button.OnClickListener fun_Paste = new Button.OnClickListener() {
-		public void onClick(View v) {
-
-			final File src = new File(_currentPasteFilePath);
-			if (!src.exists()) {
-				Toast.makeText(getApplicationContext(), R.string.file_notexists, Toast.LENGTH_SHORT).show();
-				return;
-			}
-			String newPath = FileUtil.combinPath(_currentPath, src.getName());
-			final File tar = new File(newPath);
-			if (tar.exists()) {
-				Toast.makeText(getApplicationContext(), R.string.file_exists, Toast.LENGTH_SHORT).show();
-				return;
-			}
-
-			progressDialog = ProgressDialog.show(PasteFile.this, "", "Please wait...", true, false);
-
-			new Thread() {
-				@Override
-				public void run() {
-					if ("MOVE".equals(_action)) { // ÒÆ¶¯ÎÄ¼ş
-						try {
-							FileUtil.moveFile(src, tar);
-						} catch (Exception ex) {
-							Log.e(TAG, getString(R.string.file_move_fail), ex);
-							Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_SHORT).show();
-						}
-					} else { // ¸´ÖÆÎÄ¼ş
-						try {
-							FileUtil.copyFile(src, tar);
-						} catch (Exception ex) {
-							Log.e(TAG, getString(R.string.file_copy_fail), ex);
-							Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_SHORT).show();
-						}
-					}
-
-					progressHandler.sendEmptyMessage(0);
-				}
-			}.start();
-		}
-	};
-
-	private Button.OnClickListener fun_Cancel = new Button.OnClickListener() {
-		public void onClick(View v) {
-			setResult(Activity.RESULT_CANCELED);
-			finish();
-		}
-	};
+            // this.onContentChanged();
+            adapter.notifyDataSetChanged();
+        }
+    }
 }
