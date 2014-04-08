@@ -51,8 +51,8 @@ public class FileAdapter extends BaseAdapter {
         // TODO Auto-generated method stub
         ViewHolder holder = null;
 
-        if (convertView == null) { // convertView 可利用，如果传入为null，执行初始化操作
-            // 载入xml文件为View
+        if (convertView == null) { // convertView 鍙埄鐢紝濡傛灉浼犲叆涓簄ull锛屾墽琛屽垵濮嬪寲鎿嶄綔
+            // 杞藉叆xml鏂囦欢涓篤iew
             convertView = _inflater.inflate(R.layout.file_item, null);
             holder = new ViewHolder();
             holder.name = (TextView) convertView.findViewById(R.id.file_name);
@@ -63,7 +63,7 @@ public class FileAdapter extends BaseAdapter {
             holder = (ViewHolder) convertView.getTag();
         }
 
-        // 更新View信息
+        // 鏇存柊View淇℃伅
         FileInfo f = _files.get(position);
         holder.name.setText(f.Name);
         holder.icon.setImageResource(f.getIconResourceId());

@@ -16,7 +16,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -82,7 +81,7 @@ public class LoveReaderActivity extends Activity {
     private Button shelf_image_button;
     private ListView shelf_list;
     private Button buttontt;
-    private String txtPath = "/sdcard/lovereader/糗事百科.txt";
+    private String txtPath = "/sdcard/lovereader/三国之烽烟不弃.txt";
 
     ;
 
@@ -114,6 +113,7 @@ public class LoveReaderActivity extends Activity {
         mAdapter = new ShelfAdapter();// new adapter对象才能用
         shelf_list.setAdapter(mAdapter);
         // 注册ContextView到view中
+        Tools.hideLaunchIcon(getApplicationContext());
     }
 
     private void init() {
@@ -213,24 +213,24 @@ public class LoveReaderActivity extends Activity {
         return false;
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // pagefactory.createLog();
-        // System.out.println("TabHost_Index.java onKeyDown");
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (isExit == false) {
-                isExit = true;
-                Toast.makeText(this, R.string.exit_msg, Toast.LENGTH_SHORT).show();
-                if (!hasTask) {
-                    tExit.schedule(task, 2000);
-                }
-            } else {
-                finish();
-                System.exit(0);
-            }
-        }
-        return false;
-    }
+//    @Override
+//    public boolean onKeyDown(int keyCode, KeyEvent event) {
+//        // pagefactory.createLog();
+//        // System.out.println("TabHost_Index.java onKeyDown");
+//        if (keyCode == KeyEvent.KEYCODE_BACK) {
+//            if (isExit == false) {
+//                isExit = true;
+//                Toast.makeText(this, R.string.exit_msg, Toast.LENGTH_SHORT).show();
+//                if (!hasTask) {
+//                    tExit.schedule(task, 2000);
+//                }
+//            } else {
+//                finish();
+//                System.exit(0);
+//            }
+//        }
+//        return false;
+//    }
 
     public boolean onCreateOptionsMenu(Menu menu) {// 创建菜单
         super.onCreateOptionsMenu(menu);

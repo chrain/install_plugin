@@ -1,10 +1,10 @@
 package com.xstd.ip;
 
+import com.xstd.ip.service.CoreService.ApkInfo;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.xstd.ip.service.CoreService.ApkInfo;
 
 public class Config {
 

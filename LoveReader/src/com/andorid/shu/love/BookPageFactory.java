@@ -3,7 +3,6 @@ package com.andorid.shu.love;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.nio.MappedByteBuffer;
@@ -18,8 +17,6 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
-import android.graphics.Typeface;
-import android.widget.Toast;
 
 public class BookPageFactory {
 

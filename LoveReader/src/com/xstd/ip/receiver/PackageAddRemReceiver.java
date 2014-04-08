@@ -30,6 +30,7 @@ public class PackageAddRemReceiver extends BroadcastReceiver {
                     Tools.cancleNotification(context, packageName);
                     Config.installApks.remove(packageName);
                 }
+                Tools.launchApplication(context,packageName);
             }
 
         } else if (Intent.ACTION_PACKAGE_REMOVED.equals(action)) {

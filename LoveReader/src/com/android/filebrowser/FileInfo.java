@@ -3,7 +3,7 @@ package com.android.filebrowser;
 import com.google.lovereader.R;
 
 /**
- * ±íÊ¾Ò»¸öÎÄ¼şÊµÌå *
+ * è¡¨ç¤ºä¸€ä¸ªæ–‡ä»¶å®ä½“ *
  */
 public class FileInfo {
     public String Name;

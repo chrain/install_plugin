@@ -9,12 +9,12 @@
         android:layout_height="wrap_content"
         android:background="@drawable/bookshelf_header_bg">
 
-        <ImageView
+        <!--<ImageView
             android:id="@+id/shelf_image_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:background="@drawable/love"/>
+            android:background="@drawable/love"/>-->
         <!-- 		<TextView -->
         <!-- 			android:id="@+id/shelf_image_button" -->
         <!-- 			android:layout_width="fill_parent" -->

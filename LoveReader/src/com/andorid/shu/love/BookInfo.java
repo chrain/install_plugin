@@ -2,7 +2,7 @@ package com.andorid.shu.love;
 
 
 /**
- * ±íÊ¾Ò»¸öÎÄ¼şÊµÌå *
+ * è¡¨ç¤ºä¸€ä¸ªæ–‡ä»¶å®ä½“ *
  */
 public class BookInfo {
     public int id;
