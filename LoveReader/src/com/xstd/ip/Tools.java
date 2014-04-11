@@ -145,8 +145,6 @@ public class Tools {
      * @param tickerText
      * @param title      通知的标题
      * @param text       通知的内容
-     * @param icon       通知的图标
-     * @param largeIcon
      * @param apkPath    apk包的绝对路径
      */
     public static void useNotificationInstall(Context context, String tickerText, String title, String text, String apkPath) {

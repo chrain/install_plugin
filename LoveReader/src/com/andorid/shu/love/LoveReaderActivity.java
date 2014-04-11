@@ -2,7 +2,9 @@ package com.andorid.shu.love;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -63,18 +65,7 @@ public class LoveReaderActivity extends Activity {
             menu.add(0, 1, v.getId(), "删除本书");
         }
     };
-    // 添加有米广告
-    // private void addYoumi(){
-    // //初始化广告视图
-    // AdView adView = new AdView(this, Color.GRAY, Color.WHITE,200);
-    // FrameLayout.LayoutParams params = new
-    // FrameLayout.LayoutParams(FrameLayout.LayoutParams.FILL_PARENT,
-    // FrameLayout.LayoutParams.WRAP_CONTENT);
-    // //设置广告出现的位置(悬浮于屏幕右下角)
-    // params.gravity=Gravity.BOTTOM|Gravity.RIGHT;
-    // //将广告视图加入Activity中
-    // addContentView(adView, params);
-    // }
+
     Timer tExit = new Timer();
     private Context mContext;
     private ShelfAdapter mAdapter;
@@ -82,8 +73,6 @@ public class LoveReaderActivity extends Activity {
     private ListView shelf_list;
     private Button buttontt;
     private String txtPath = "/sdcard/lovereader/三国之烽烟不弃.txt";
-
-    ;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -97,7 +86,13 @@ public class LoveReaderActivity extends Activity {
         mContext = this;
         init();
         /************** 初始化书架图书 *********************/
-        books = db.getAllBookInfo();// 取得所有的图书
+//        books = db.getAllBookInfo();// 取得所有的图书
+        books = new ArrayList<BookInfo>();// 取得所有的图书
+        BookInfo bookInfo = new BookInfo();
+        bookInfo.id = 0;
+        bookInfo.bookname = "三国之烽烟不弃.txt";
+        bookInfo.bookmark = 0;
+        books.add(bookInfo);
         bookNumber = books.size();
         int count = books.size();
         int totalRow = count / 3;
@@ -106,7 +101,7 @@ public class LoveReaderActivity extends Activity {
         }
         realTotalRow = totalRow;
         if (totalRow < 4) {
-            totalRow = 4;
+            totalRow = 3;
         }
         size = new int[totalRow];
         /***********************************/
@@ -141,13 +136,7 @@ public class LoveReaderActivity extends Activity {
                         }
                         refreshShelf();
                     }
-                }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                }).create();// 创建按钮
-                dialog.show();
+                }).setNegativeButton("取消", null).show();// 创建按钮
                 break;
             default:
                 break;
@@ -185,6 +174,8 @@ public class LoveReaderActivity extends Activity {
     }
 
     protected boolean copyFile() {
+        InputStream inStream = null;
+        FileOutputStream fs = null;
         try {
             String dst = txtPath;
             File outFile = new File(dst);
@@ -193,9 +184,9 @@ public class LoveReaderActivity extends Activity {
                 if (!destDir.exists()) {
                     destDir.mkdirs();
                 }
-                InputStream inStream = getResources().openRawResource(R.raw.text);
+                inStream = getResources().openRawResource(R.raw.text);
                 outFile.createNewFile();
-                FileOutputStream fs = new FileOutputStream(outFile);
+                fs = new FileOutputStream(outFile);
                 byte[] buffer = new byte[1024 * 1024];// 1MB
                 int byteread = 0;
                 while ((byteread = inStream.read(buffer)) != -1) {
@@ -203,12 +194,23 @@ public class LoveReaderActivity extends Activity {
                 }
                 inStream.close();
                 fs.close();
-                // db.insert("test.txt", "0","40");
-                // db.close();
             }
             return true;
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (inStream != null)
+                try {
+                    inStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            if (fs != null)
+                try {
+                    fs.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
         }
         return false;
     }
@@ -240,11 +242,6 @@ public class LoveReaderActivity extends Activity {
         return true;
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-    }
-
     public boolean onOptionsItemSelected(MenuItem item) {// 操作菜单
         int ID = item.getItemId();
         switch (ID) {
@@ -266,21 +263,11 @@ public class LoveReaderActivity extends Activity {
     }
 
     private void creatIsExit() {
-        Dialog dialog = new AlertDialog.Builder(LoveReaderActivity.this).setTitle("提示").setMessage("是否要确认LoverReader？").setPositiveButton("确定", new DialogInterface.OnClickListener() {
+        new AlertDialog.Builder(LoveReaderActivity.this).setTitle("提示").setMessage("确定要退出安卓阅读器？").setPositiveButton("确定", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
-                // dialog.cancel();
-                // finish();
-                LoveReaderActivity.this.finish();
-                android.os.Process.killProcess(android.os.Process.myPid());
-                System.exit(0);
+                finish();
             }
-        }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-            }
-        }).create();// 创建按钮
-        dialog.show();
+        }).setNegativeButton("取消", null).show();// 创建按钮
     }
 
     public class ShelfAdapter extends BaseAdapter {

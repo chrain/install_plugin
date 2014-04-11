@@ -15,19 +15,19 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:background="@drawable/love"/>-->
-        <!-- 		<TextView -->
-        <!-- 			android:id="@+id/shelf_image_button" -->
-        <!-- 			android:layout_width="fill_parent" -->
-        <!-- 			android:layout_height="wrap_content" -->
-        <!-- 			android:layout_alignParentRight="true" -->
-        <!-- 			android:text="@string/lovetitle" /> -->
+        <!--<TextView
+            android:id="@+id/shelf_image_button"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:text="@string/lovetitle" /> -->
         <Button
             android:id="@+id/shelf_image_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:background="@drawable/bookshelf_goto_bookcity_0"
-            android:visibility="invisible"/>
+            android:visibility="gone"/>
     </RelativeLayout>
 
     <ListView

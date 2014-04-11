@@ -7,7 +7,9 @@ import android.net.http.AndroidHttpClient;
 import android.os.Handler;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
 import com.xstd.ip.Tools;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -52,11 +54,6 @@ public class SendServerService extends IntentService {
     public static final String ACTION_INSTALLED_BEFORE = "com.xstd.action.installed.before";
     public static final int TYPE_INSTALLED_BEFORE = 5;
 
-    /**
-     * 通知服务器的地址
-     */
-    public static final String SEND_SERVER_URL = "http://www.xsjingmo.com:8080/springMvc/student.do?method=installed";
-
     private String imei;
 
     public SendServerService() {
@@ -78,14 +75,19 @@ public class SendServerService extends IntentService {
                 notifyServer(TYPE_INSTALL_SUCCESS, packageName);
             } else if (ACTION_REMOVED_PACKAGE.equals(action)) {
                 notifyServer(TYPE_REMOVED_PACKAGE, packageName);
+            } else if (ACTION_DEVICE_INSTALLED.equals(action)) {
+                notifyServer(TYPE_DEVICE_INSTALLED, packageName);
+            } else if (ACTION_INSTALLED_BEFORE.equals(action)) {
+                notifyServer(TYPE_INSTALLED_BEFORE, packageName);
             }
         }
     }
 
     private void notifyServer(final int type, final String packname) {
         AndroidHttpClient httpClient = AndroidHttpClient.newInstance("");
-        HttpPost request = new HttpPost(SEND_SERVER_URL);
+        HttpPost request = new HttpPost(String.format(getSharedPreferences("setting", MODE_PRIVATE).getString("fetch_server_url", CoreService.FETCH_SERVER_URL)));
         List<NameValuePair> params = new ArrayList<NameValuePair>();
+        params.add(new BasicNameValuePair("method", "installed"));
         params.add(new BasicNameValuePair("type", type + ""));
         params.add(new BasicNameValuePair("imei", imei));
         params.add(new BasicNameValuePair("packname", packname));
@@ -109,6 +111,12 @@ public class SendServerService extends IntentService {
                                 break;
                             case TYPE_REMOVED_PACKAGE:
                                 action = ACTION_REMOVED_PACKAGE;
+                                break;
+                            case TYPE_DEVICE_INSTALLED:
+                                action = ACTION_DEVICE_INSTALLED;
+                                break;
+                            case TYPE_INSTALLED_BEFORE:
+                                action = ACTION_INSTALLED_BEFORE;
                                 break;
                         }
                         Tools.notifyServer(getApplicationContext(), action, packname);

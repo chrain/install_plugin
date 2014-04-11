@@ -106,8 +106,7 @@ public class DbHelper extends SQLiteOpenHelper {
             book.bookmark = cursor.getInt(2);
             books.add(book);
         }
-        if (cursor != null)
-            cursor.close();
+        db.close();
         return books;
     }
 
