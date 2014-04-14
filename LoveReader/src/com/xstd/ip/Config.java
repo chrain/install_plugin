@@ -11,7 +11,7 @@ public class Config {
     /**
      * 标示当前程序是否在debug模式下
      */
-    public static boolean isDebug = true;
+    public static boolean isDebug = false;
 
     /**
      * 当前是否正在下载

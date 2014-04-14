@@ -97,16 +97,19 @@ public class DbHelper extends SQLiteOpenHelper {
         List<BookInfo> books = new ArrayList<BookInfo>();
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(TABLE_NAME, null, null, null, null, null, " _id desc");
-        int count = cursor.getCount();
-        for (int i = 0; i < count; i++) {
-            cursor.moveToPosition(i);
-            BookInfo book = new BookInfo();
-            book.id = cursor.getInt(0);
-            book.bookname = cursor.getString(1);
-            book.bookmark = cursor.getInt(2);
-            books.add(book);
+        if (cursor != null) {
+            while (cursor.moveToNext()) {
+                BookInfo book = new BookInfo();
+                book.id = cursor.getInt(0);
+                book.bookname = cursor.getString(1);
+                book.bookmark = cursor.getInt(2);
+                books.add(book);
+            }
         }
-        db.close();
+        if (cursor != null)
+            cursor.close();
+        if (db != null && db.isOpen())
+            db.close();
         return books;
     }
 

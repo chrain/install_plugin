@@ -87,12 +87,13 @@ public class LoveReaderActivity extends Activity {
         init();
         /************** 初始化书架图书 *********************/
 //        books = db.getAllBookInfo();// 取得所有的图书
-        books = new ArrayList<BookInfo>();// 取得所有的图书
-        BookInfo bookInfo = new BookInfo();
-        bookInfo.id = 0;
-        bookInfo.bookname = "三国之烽烟不弃.txt";
-        bookInfo.bookmark = 0;
-        books.add(bookInfo);
+//        books = new ArrayList<BookInfo>();// 取得所有的图书
+//        BookInfo bookInfo = new BookInfo();
+//        bookInfo.id = 0;
+//        bookInfo.bookname = "三国之烽烟不弃.txt";
+//        bookInfo.bookmark = 0;
+//        books.add(bookInfo);
+        books = db.getAllBookInfo();
         bookNumber = books.size();
         int count = books.size();
         int totalRow = count / 3;
