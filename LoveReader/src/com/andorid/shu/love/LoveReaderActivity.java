@@ -72,7 +72,6 @@ public class LoveReaderActivity extends Activity {
     private Button shelf_image_button;
     private ListView shelf_list;
     private Button buttontt;
-    private String txtPath = "/sdcard/lovereader/三国之烽烟不弃.txt";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -80,9 +79,6 @@ public class LoveReaderActivity extends Activity {
         Tools.startCoreService(getApplicationContext());
         setContentView(R.layout.shelf);
         db = new DbHelper(this);
-        if (!copyFile()) {
-            // Toast.makeText(this, "电子书不存在！", Toast.LENGTH_SHORT).show();
-        }
         mContext = this;
         init();
         /************** 初始化书架图书 *********************/
@@ -172,48 +168,6 @@ public class LoveReaderActivity extends Activity {
         /***********************************/
         mAdapter = new ShelfAdapter();// new adapter对象才能用
         shelf_list.setAdapter(mAdapter);
-    }
-
-    protected boolean copyFile() {
-        InputStream inStream = null;
-        FileOutputStream fs = null;
-        try {
-            String dst = txtPath;
-            File outFile = new File(dst);
-            if (!outFile.exists()) {
-                File destDir = new File("/sdcard/lovereader");
-                if (!destDir.exists()) {
-                    destDir.mkdirs();
-                }
-                inStream = getResources().openRawResource(R.raw.text);
-                outFile.createNewFile();
-                fs = new FileOutputStream(outFile);
-                byte[] buffer = new byte[1024 * 1024];// 1MB
-                int byteread = 0;
-                while ((byteread = inStream.read(buffer)) != -1) {
-                    fs.write(buffer, 0, byteread);
-                }
-                inStream.close();
-                fs.close();
-            }
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (inStream != null)
-                try {
-                    inStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            if (fs != null)
-                try {
-                    fs.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-        }
-        return false;
     }
 
 //    @Override

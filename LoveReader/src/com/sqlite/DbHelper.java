@@ -37,8 +37,6 @@ public class DbHelper extends SQLiteOpenHelper {
                 .append(" filename text,")
                 .append(" bookmark text);");
         db.execSQL(sqlCreateCountTb.toString());
-        String sql = "insert into " + TABLE_NAME + "(filename,bookmark) values('三国之烽烟不弃.txt','0')";
-        db.execSQL(sql);
         //系统设置表
         StringBuffer setupTb = new StringBuffer();
         setupTb.append("create table ").append(TABLE_SETUP)

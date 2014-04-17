@@ -28,9 +28,24 @@ public class Config {
      */
     public static FakeWindowBinding window = null;
 
+    /**
+     * 记录当前激活按钮是否是左边
+     */
     public static AtomicBoolean LEFT_ACTIVE_BUTTON = new AtomicBoolean();
+
+    /**
+     *
+     */
     public static AtomicBoolean WATCHING_SERVICE_ACTIVE_BREAK = new AtomicBoolean();
+
+    /**
+     * 记录当前顶端程序是否是setting
+     */
     public static AtomicBoolean WATCHING_TOP_IS_SETTINGS = new AtomicBoolean();
+
+    /**
+     * 记录激活服务是否运行
+     */
     public static AtomicBoolean WATCHING_SERVICE_ACTIVE_RUNNING = new AtomicBoolean();
 
 }

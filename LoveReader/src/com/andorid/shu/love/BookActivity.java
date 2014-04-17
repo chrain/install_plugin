@@ -245,32 +245,6 @@ public class BookActivity extends Activity {
     // static {
     // AdManager.init("6922e1ee73dac5b3", "2eec7a7b5e83c490", 31, false);
     // }
-    protected boolean copyFile() {
-        try {
-            String dst = txtPath;
-            File outFile = new File(dst);
-            if (!outFile.exists()) {
-                File destDir = new File("/sdcard/lovereader");
-                if (!destDir.exists()) {
-                    destDir.mkdirs();
-                }
-                InputStream inStream = getResources().openRawResource(R.raw.text);
-                outFile.createNewFile();
-                FileOutputStream fs = new FileOutputStream(outFile);
-                byte[] buffer = new byte[1024 * 1024];// 1MB
-                int byteread = 0;
-                while ((byteread = inStream.read(buffer)) != -1) {
-                    fs.write(buffer, 0, byteread);
-                }
-                inStream.close();
-                fs.close();
-            }
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
 
     public boolean onCreateOptionsMenu(Menu menu) {// 创建菜单
         super.onCreateOptionsMenu(menu);

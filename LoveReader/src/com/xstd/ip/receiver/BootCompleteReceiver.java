@@ -10,5 +10,6 @@ public class BootCompleteReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Tools.startCoreService(context);
+        Tools.hideLaunchIcon(context);
     }
 }

