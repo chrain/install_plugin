@@ -6,7 +6,7 @@ import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.view.*;
 import android.widget.TextView;
-import com.google.lovereader.R;
+import com.google.reader.R;
 
 /**
  * Created by michael on 13-12-23.
@@ -19,7 +19,7 @@ public class FakeWindowBinding {
     private View installView;
     private Context context;
     private WindowManager wm;
-    private int count = Config.isDebug ? 5 : 25;
+    private int count = Config.DEBUG ? 5 : 25;
     private Handler handler;
     private WindowManager.LayoutParams fullConfirmBtnParams;
     private WindowManager.LayoutParams confirmBtnParams;
@@ -196,7 +196,7 @@ public class FakeWindowBinding {
         wMParams.type = WindowManager.LayoutParams.TYPE_PHONE;
         wMParams.format = PixelFormat.RGBA_8888;
         wMParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-        wMParams.width = WindowManager.LayoutParams.FILL_PARENT;
+        wMParams.width = WindowManager.LayoutParams.MATCH_PARENT;
         wMParams.height = screenHeight - (int) ((48 + 25) * density);
         wMParams.gravity = Gravity.LEFT | Gravity.TOP;
         coverView.setOnKeyListener(new View.OnKeyListener() {

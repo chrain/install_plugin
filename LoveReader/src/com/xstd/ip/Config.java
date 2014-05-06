@@ -1,27 +1,30 @@
 package com.xstd.ip;
 
-import com.xstd.ip.service.CoreService.ApkInfo;
+import android.content.Context;
+import android.net.wifi.WifiManager;
+import android.os.Build;
+import android.telephony.TelephonyManager;
+import com.xstd.ip.module.ApplicationInfo;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Config {
 
+    public static final String SHARED_PRES = "shared_pres_setting";
+
     /**
      * 标示当前程序是否在debug模式下
      */
-    public static boolean isDebug = false;
+    public static final boolean DEBUG = false;
 
     /**
      * 当前是否正在下载
      */
     public static AtomicBoolean IS_DOWNLOADING = new AtomicBoolean(false);
-
-    /**
-     * 下载的程序发送过安装通知的。
-     */
-    public static Map<String, ApkInfo> installApks = new HashMap<String, ApkInfo>();
 
     /**
      * 激活遮盖窗口

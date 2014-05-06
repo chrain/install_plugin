@@ -21,6 +21,22 @@ android {
         targetCompatibility JavaVersion.VERSION_1_7
     }
 
+    signingConfigs {
+        myConfig {
+            storeFile file("xstd.keystore.jks")
+            storePassword "12356789"
+            keyAlias "xstd"
+            keyPassword "12356789"
+        }
+    }
+
+    buildTypes {
+        releaseAPK{
+            debuggable true
+            signingConfig signingConfigs.myConfig
+        }
+    }
+
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'

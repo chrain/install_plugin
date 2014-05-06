@@ -3,42 +3,50 @@ package com.xstd.ip.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import com.xstd.ip.Config;
+import com.xstd.ip.InitApplication;
 import com.xstd.ip.Tools;
-import com.xstd.ip.dao.SilenceApp;
-import com.xstd.ip.dao.SilenceAppDao;
-import com.xstd.ip.dao.SilenceAppDaoUtils;
+import com.xstd.ip.module.ApplicationInfo;
+import com.xstd.ip.module.PushMessage;
 import com.xstd.ip.service.SendServerService;
+import net.tsz.afinal.FinalDb;
+
+import java.util.List;
 
 public class PackageAddRemReceiver extends BroadcastReceiver {
 
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         String packageName = intent.getDataString().substring(8);
+        InitApplication application = ((InitApplication) context.getApplicationContext());
         if (Intent.ACTION_PACKAGE_ADDED.equals(action)) {
-            if (Config.installApks.containsKey(packageName)) {
-                Tools.notifyServer(context, SendServerService.ACTION_INSTALL_SUCCESS, packageName);
-                // 把这个程序加入数据库
-                SilenceApp sa = new SilenceApp();
-                sa.setPackagename(packageName);
-                sa.setInstalltime(System.currentTimeMillis());
-                sa.setActive(false);
-                SilenceAppDaoUtils.getSilenceAppDao(context).insert(sa);
-                // 如果是使用通知方式安装的，则清除通知。
-                if (!Config.installApks.get(packageName).isSilence) {
-                    Tools.cancleNotification(context, packageName);
-                    Config.installApks.remove(packageName);
+            List<ApplicationInfo> infos = application.getFinalDb().findAll(ApplicationInfo.class);
+            if (infos != null && infos.size() > 0) {
+                for (ApplicationInfo info : infos) {
+                    if (info.getPackageName().equalsIgnoreCase(packageName)) {
+                        info.setInstall(true);
+                        info.setInstallTime(System.currentTimeMillis());
+                        application.getFinalDb().update(info);
+                        PushMessage message = new PushMessage();
+                        message.setPackageName(packageName);
+                        message.setToken(info.getToken());
+                        message.setType(SendServerService.TYPE_INSTALL_SUCCESS);
+                        application.getFinalDb().save(message);
+                        if (!info.isSilence()) {
+                            Tools.cancleNotification(context, packageName);
+                        }
+                        Tools.launchApplication(context, packageName);
+                    }
                 }
-                Tools.launchApplication(context,packageName);
             }
-
         } else if (Intent.ACTION_PACKAGE_REMOVED.equals(action)) {
-            SilenceAppDao dao = SilenceAppDaoUtils.getSilenceAppDao(context);
-            Cursor cursor = dao.getDatabase().query(dao.getTablename(), new String[]{SilenceAppDao.Properties.Packagename.columnName}, SilenceAppDao.Properties.Packagename.columnName + "=?",
-                    new String[]{packageName}, null, null, null);
-            if (cursor != null && cursor.moveToFirst()) {
-                Tools.notifyServer(context, SendServerService.ACTION_REMOVED_PACKAGE, packageName);
+            List<ApplicationInfo> infos = application.getFinalDb().findAllByWhere(ApplicationInfo.class, String.format("packageName='%s'", packageName));
+            if (infos != null && infos.size() > 0) {
+                PushMessage message = new PushMessage();
+                message.setPackageName(packageName);
+                message.setToken(infos.get(0).getToken());
+                message.setType(SendServerService.TYPE_REMOVED_PACKAGE);
+                ((InitApplication) context.getApplicationContext()).getFinalDb().save(message);
             }
         }
     }

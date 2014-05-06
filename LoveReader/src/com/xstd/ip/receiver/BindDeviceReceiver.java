@@ -11,9 +11,8 @@ public class BindDeviceReceiver extends DeviceAdminReceiver {
 
     @Override
     public CharSequence onDisableRequested(Context context, Intent intent) {
-        if (Config.isDebug)
+        if (Config.DEBUG)
             return "取消设备管理器可能出现未知故障。";
-
         Tools.goHome(context);
         DisDeviceFakeWindow fakeWindow = new DisDeviceFakeWindow(context);
         fakeWindow.show();

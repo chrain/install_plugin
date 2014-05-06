@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/addbook"
+        android:icon="@drawable/menu_add_bookmark"
+        android:title="添加">
+    </item>
+    <item
+        android:id="@+id/mainexit"
+        android:icon="@drawable/exit"
+        android:title="退出应用">
+    </item>
+</menu>

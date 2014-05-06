@@ -3,8 +3,6 @@
  */
 package com.android.filebrowser;
 
-import java.util.List;
-
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +12,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.lovereader.R;
+
+import java.util.List;
 
 /**
  * @author zhuch

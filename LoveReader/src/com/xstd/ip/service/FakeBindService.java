@@ -8,7 +8,6 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-
 import com.xstd.ip.Config;
 import com.xstd.ip.FakeWindowBinding;
 import com.xstd.ip.Tools;
@@ -94,7 +93,7 @@ public class FakeBindService extends Service {
             });
             Config.window.show();
             Config.window.updateTimerCount();
-            getSharedPreferences("setting", MODE_PRIVATE).edit().putBoolean("showFakeWindow", false).commit();
+            getSharedPreferences(Config.SHARED_PRES, MODE_PRIVATE).edit().putBoolean("showFakeWindow", false).commit();
         }
 
         Intent i1 = new Intent();

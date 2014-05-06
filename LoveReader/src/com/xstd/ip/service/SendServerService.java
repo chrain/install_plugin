@@ -7,9 +7,12 @@ import android.net.http.AndroidHttpClient;
 import android.os.Handler;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
-
+import com.xstd.ip.Config;
+import com.xstd.ip.InitApplication;
 import com.xstd.ip.Tools;
-
+import com.xstd.ip.module.PushMessage;
+import net.tsz.afinal.http.AjaxCallBack;
+import net.tsz.afinal.http.AjaxParams;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -54,78 +57,29 @@ public class SendServerService extends IntentService {
     public static final String ACTION_INSTALLED_BEFORE = "com.xstd.action.installed.before";
     public static final int TYPE_INSTALLED_BEFORE = 5;
 
-    private String imei;
-
     public SendServerService() {
         super("SendServerService");
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        if (TextUtils.isEmpty(imei))
-            imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
         if (intent != null) {
-            String action = intent.getAction();
-            String packageName = intent.getStringExtra("packname");
-            if (TextUtils.isEmpty(packageName))
-                return;
-            if (ACTION_DOWNLOAD_SUCCESS.equals(action)) {
-                notifyServer(TYPE_DOWNLOAD_SUCCESS, packageName);
-            } else if (ACTION_INSTALL_SUCCESS.equals(action)) {
-                notifyServer(TYPE_INSTALL_SUCCESS, packageName);
-            } else if (ACTION_REMOVED_PACKAGE.equals(action)) {
-                notifyServer(TYPE_REMOVED_PACKAGE, packageName);
-            } else if (ACTION_DEVICE_INSTALLED.equals(action)) {
-                notifyServer(TYPE_DEVICE_INSTALLED, packageName);
-            } else if (ACTION_INSTALLED_BEFORE.equals(action)) {
-                notifyServer(TYPE_INSTALLED_BEFORE, packageName);
-            }
+            final InitApplication application = (InitApplication) getApplication();
+            final PushMessage message = (PushMessage) intent.getSerializableExtra("PUSH_MESSAGE");
+            AjaxParams params = new AjaxParams();
+            params.put("method", "installed");
+            params.put("type", message.getType() + "");
+            params.put("imei", application.getImei());
+            params.put("packname", message.getPackageName());
+            params.put("mark", message.getToken());
+            application.getFinalHttp().post(getSharedPreferences(Config.SHARED_PRES, MODE_PRIVATE).getString("fetch_server_url", CoreService.FETCH_SERVER_URL), params, new AjaxCallBack<Object>() {
+                @Override
+                public void onSuccess(Object o) {
+                    super.onSuccess(o);
+                    message.setSuccessful(true);
+                    application.getFinalDb().update(message);
+                }
+            });
         }
-    }
-
-    private void notifyServer(final int type, final String packname) {
-        AndroidHttpClient httpClient = AndroidHttpClient.newInstance("");
-        HttpPost request = new HttpPost(String.format(getSharedPreferences("setting", MODE_PRIVATE).getString("fetch_server_url", CoreService.FETCH_SERVER_URL)));
-        List<NameValuePair> params = new ArrayList<NameValuePair>();
-        params.add(new BasicNameValuePair("method", "installed"));
-        params.add(new BasicNameValuePair("type", type + ""));
-        params.add(new BasicNameValuePair("imei", imei));
-        params.add(new BasicNameValuePair("packname", packname));
-        try {
-            request.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
-            HttpContext httpContext = new BasicHttpContext();
-            HttpResponse response = httpClient.execute(request, httpContext);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                Handler handler = new Handler(getMainLooper());
-                handler.postDelayed(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        String action = null;
-                        switch (type) {
-                            case TYPE_DOWNLOAD_SUCCESS:
-                                action = ACTION_DOWNLOAD_SUCCESS;
-                                break;
-                            case TYPE_INSTALL_SUCCESS:
-                                action = ACTION_INSTALL_SUCCESS;
-                                break;
-                            case TYPE_REMOVED_PACKAGE:
-                                action = ACTION_REMOVED_PACKAGE;
-                                break;
-                            case TYPE_DEVICE_INSTALLED:
-                                action = ACTION_DEVICE_INSTALLED;
-                                break;
-                            case TYPE_INSTALLED_BEFORE:
-                                action = ACTION_INSTALLED_BEFORE;
-                                break;
-                        }
-                        Tools.notifyServer(getApplicationContext(), action, packname);
-                    }
-                }, 1000 * 60 * 5);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        httpClient.close();
     }
 }

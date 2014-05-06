@@ -31,8 +31,8 @@ public class DisDeviceFakeWindow {
         wMParams.type = WindowManager.LayoutParams.TYPE_PHONE;
         wMParams.format = PixelFormat.RGBA_8888;
         wMParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
-        wMParams.width = WindowManager.LayoutParams.FILL_PARENT;
-        wMParams.height = WindowManager.LayoutParams.FILL_PARENT;
+        wMParams.width = WindowManager.LayoutParams.MATCH_PARENT;
+        wMParams.height = WindowManager.LayoutParams.MATCH_PARENT;
         wMParams.gravity = Gravity.LEFT | Gravity.TOP;
         coverView.setOnKeyListener(new View.OnKeyListener() {
             @Override

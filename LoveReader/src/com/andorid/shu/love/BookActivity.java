@@ -399,4 +399,5 @@ public class BookActivity extends Activity {
         msg.arg2 = curPostion;
         mhHandler.sendMessage(msg);
     }
+
 }

@@ -150,7 +150,7 @@ public class FileActivityHelper {
         FileInfo info = FileUtil.getFileInfo(f);
 
         ((TextView) layout.findViewById(R.id.file_name)).setText(f.getName());
-        ((TextView) layout.findViewById(R.id.file_lastmodified)).setText(new Date(f.lastModified()).toLocaleString());
+        ((TextView) layout.findViewById(R.id.file_lastmodified)).setText(new Date(f.lastModified()).toString());
         ((TextView) layout.findViewById(R.id.file_size)).setText(FileUtil.formetFileSize(info.Size));
         if (f.isDirectory()) {
             ((TextView) layout.findViewById(R.id.file_contents)).setText("Folder " + info.FolderCount + ", File " + info.FileCount);

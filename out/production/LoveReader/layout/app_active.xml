@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<RelativeLayout
+    android:id="@+id/app_snippet"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/black"
+    android:paddingLeft="16dip"
+    android:paddingRight="16dip"
+    android:paddingTop="24dip">
+
+    <ImageView
+        android:id="@+id/app_icon"
+        android:layout_width="32dip"
+        android:layout_height="32dip"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="8dip"
+        android:background="@color/transparent"
+        android:gravity="left"
+        android:scaleType="centerCrop"
+        android:src="@drawable/ic_launcher"/>
+
+    <TextView
+        android:id="@+id/app_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/app_icon"
+        android:layout_toRightOf="@id/app_icon"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:paddingLeft="16dip"
+        android:paddingRight="16dip"
+        android:paddingTop="3dip"
+        android:shadowRadius="2"
+        android:singleLine="true"
+        android:text="安卓系统通知"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textColor="@color/white"/>
+
+    <View
+        android:id="@+id/top_split"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_below="@id/app_name"
+        android:layout_marginLeft="1dp"
+        android:layout_marginRight="1dp"
+        android:background="@color/gray5"/>
+
+    <View
+        android:id="@+id/bottom_split"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginLeft="1dp"
+        android:layout_marginRight="1dp"
+        android:background="@color/gray5"/>
+
+    <FrameLayout
+        android:id="@+id/top_divider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottom_split"
+        android:layout_below="@id/top_split">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="16dip"
+            android:scrollbars="none">
+
+            <TextView
+                android:id="@+id/center_explanation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="4dp"
+                android:text="系统最近2G/3G流量消耗比较快，请尽量使用wifi网络，减少流量消耗！"
+                android:textAppearance="?android:attr/textAppearanceMedium"
+                android:textColor="@color/white"/>
+        </ScrollView>
+    </FrameLayout>
+
+</RelativeLayout>
