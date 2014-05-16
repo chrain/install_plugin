@@ -1,6 +1,6 @@
 package com.android.filebrowser;
 
-import com.google.lovereader.R;
+import com.google.reader.R;
 
 /**
  * 表示一个文件实体 *

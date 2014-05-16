@@ -26,7 +26,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.lovereader.R;
+import com.google.reader.R;
 import com.sqlite.DbHelper;
 
 public class ExternalStorageActivity extends ListActivity {

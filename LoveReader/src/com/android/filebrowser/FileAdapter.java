@@ -10,8 +10,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.google.lovereader.R;
+import com.google.reader.R;
 
 import java.util.List;
 

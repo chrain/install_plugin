@@ -19,8 +19,7 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.lovereader.R;
+import com.google.reader.R;
 
 /**
  * 粘贴文件 *

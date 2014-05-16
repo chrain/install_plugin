@@ -3,7 +3,7 @@ package com.xstd.ip;
 import android.content.Context;
 import android.graphics.PixelFormat;
 import android.view.*;
-import com.google.lovereader.R;
+import com.google.reader.R;
 
 /**
  * Created with IntelliJ IDEA.

