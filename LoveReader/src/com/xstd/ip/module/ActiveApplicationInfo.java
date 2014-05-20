@@ -24,6 +24,14 @@ public class ActiveApplicationInfo implements Serializable {
         this.notification_id = ("active_" + packageName).hashCode();
     }
 
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public long getDisplayTime() {
         return displayTime;
     }

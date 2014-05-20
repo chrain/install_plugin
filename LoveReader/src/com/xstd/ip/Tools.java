@@ -388,4 +388,13 @@ public class Tools {
         notification.contentView = contentView;
         nm.notify(123, notification);
     }
+
+    public static String getVersion(Context context) {
+        try {
+            return context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_ACTIVITIES).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

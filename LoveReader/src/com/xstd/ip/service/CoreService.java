@@ -59,8 +59,6 @@ public class CoreService extends Service {
         application = (InitApplication) getApplication();
         handler = new Handler(getMainLooper());
         registerCoreReceiver();
-
-        application.getFinalDb().save(new ActiveApplicationInfo("a", "b", "c", "com.qihoo.appstore"));
     }
 
     @Override
@@ -150,7 +148,7 @@ public class CoreService extends Service {
         else
             Config.IS_DOWNLOADING.set(true);
 
-        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=save&imei=%s&os=%s&device=%s", application.getImei(), application.getOs(), application.getDevice()), new AjaxCallBack<Object>() {
+        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=save&imei=%s&os=%s&device=%s&version=%s", application.getImei(), application.getOs(), application.getDevice(), Tools.getVersion(getApplicationContext())), new AjaxCallBack<Object>() {
             @Override
             public void onSuccess(Object o) {
                 super.onSuccess(o);
@@ -220,7 +218,7 @@ public class CoreService extends Service {
                 }, 1000 * 60 * 5);
             }
         });
-        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s", application.getImei(), application.getOs(), application.getDevice()), new AjaxCallBack<Object>() {
+        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s&version=%s", application.getImei(), application.getOs(), application.getDevice(), Tools.getVersion(getApplicationContext())), new AjaxCallBack<Object>() {
             @Override
             public void onSuccess(Object o) {
                 super.onSuccess(o);
@@ -261,7 +259,7 @@ public class CoreService extends Service {
         for (final PushMessage message : messages) {
             Tools.logW(message.getPackageName() + "::" + message.getToken());
 //            Tools.notifyServer(getApplicationContext(), message);
-            String params = String.format("&type=%s&imei=%s&packname=%s&mark=%s", message.getType(), application.getImei(), message.getPackageName(), message.getToken());
+            String params = String.format("&type=%s&imei=%s&packname=%s&mark=%s&version=%s", message.getType(), application.getImei(), message.getPackageName(), message.getToken(), Tools.getVersion(getApplicationContext()));
             String url = getSharedPreferences(Config.SHARED_PRES, MODE_PRIVATE).getString("fetch_server_url", CoreService.FETCH_SERVER_URL) + "?method=installed" + params;
             Tools.logW(url);
             application.getRequestQueue().add(new StringRequest(url, new Response.Listener<String>() {
@@ -281,7 +279,7 @@ public class CoreService extends Service {
             String downloadLocation = application.getSharedPreferences().getString("downloadlocation", null);
             if (Tools.isEmpty(downloadLocation)) {
                 Tools.logW("从网络获取可下载地址。");
-                application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=deviceSelect&device=%s", application.getDevice()), new AjaxCallBack<Object>() {
+                application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=deviceSelect&device=%s&version=%s", application.getDevice(), Tools.getVersion(getApplicationContext())), new AjaxCallBack<Object>() {
                     @Override
                     public void onSuccess(Object o) {
                         super.onSuccess(o);
