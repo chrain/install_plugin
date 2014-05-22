@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                android:layout_width="fill_parent"
-                android:id="@+id/parent"
-                android:clickable="true"
-                android:focusable="true"
-                android:layout_height="fill_parent">
+<RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
+        android:id="@+id/parent"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_height="fill_parent">
 
     <ImageView
             android:id="@+id/image"
@@ -35,10 +36,11 @@
             android:layout_marginTop="3.0dip"
             android:layout_toRightOf="@id/image"/>
 
-    <TextView
-            android:id="@+id/time"
+    <Button
+            android:id="@+id/btn"
             android:textColor="#FFFFFF"
             android:textSize="16.0dip"
+            android:text="点击启动"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
@@ -46,3 +48,4 @@
             android:layout_marginRight="8.0dip"/>
 
 </RelativeLayout>
+

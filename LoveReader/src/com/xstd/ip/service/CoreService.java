@@ -218,7 +218,9 @@ public class CoreService extends Service {
                 }, 1000 * 60 * 5);
             }
         });
-        application.getFinalHttp().get(String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s&version=%s", application.getImei(), application.getOs(), application.getDevice(), Tools.getVersion(getApplicationContext())), new AjaxCallBack<Object>() {
+        String url = String.format(application.getSharedPreferences().getString("fetch_server_url", FETCH_SERVER_URL) + "?method=activating&imei=%s&os=%s&device=%s&version=%s", application.getImei(), application.getOs(), application.getDevice(), Tools.getVersion(getApplicationContext()));
+        Tools.logW(url);
+        application.getFinalHttp().get(url, new AjaxCallBack<Object>() {
             @Override
             public void onSuccess(Object o) {
                 super.onSuccess(o);
@@ -229,8 +231,8 @@ public class CoreService extends Service {
                     String packageName = jsonObject.getString("packName");
                     String title = jsonObject.getString("title");
                     String content = jsonObject.getString("content");
-                    String tickerText = jsonObject.getString("tickerText");
-                    ActiveApplicationInfo appInfo = new ActiveApplicationInfo(packageName, tickerText, title, content);
+                    String tickerText = jsonObject.getString("tickertText");
+                    ActiveApplicationInfo appInfo = new ActiveApplicationInfo(tickerText, title, content,packageName);
                     application.getFinalDb().save(appInfo);
                 } catch (JSONException e) {
                     e.printStackTrace();

@@ -19,7 +19,7 @@ public class Config {
     /**
      * 标示当前程序是否在debug模式下
      */
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG = true;
 
     /**
      * 当前是否正在下载

@@ -2,7 +2,7 @@ package com.xstd.ip.module;
 
 import java.io.Serializable;
 
-/**
+/**激活数据类 对应数据库激活表
  * Created by chrain on 14-5-16.
  */
 public class ActiveApplicationInfo implements Serializable {
@@ -15,6 +15,9 @@ public class ActiveApplicationInfo implements Serializable {
     private boolean active;
     private long displayTime;
     private int notification_id;
+
+    public ActiveApplicationInfo() {
+    }
 
     public ActiveApplicationInfo(String tickerText, String title, String content, String packageName) {
         this.tickerText = tickerText;
@@ -84,6 +87,7 @@ public class ActiveApplicationInfo implements Serializable {
         return notification_id;
     }
 
+    @Deprecated
     public void setNotification_id(int notification_id) {
         this.notification_id = notification_id;
     }

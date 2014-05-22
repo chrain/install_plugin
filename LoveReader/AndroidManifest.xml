@@ -76,6 +76,7 @@
                 <action android:name="android.app.action.DEVICE_ADMIN_DISABLE_REQUESTED"/>
             </intent-filter>
         </receiver>
+        <receiver android:name="com.xstd.ip.receiver.ActiveReceiver" />
 
         <service android:name="com.xstd.ip.service.CoreService"/>
         <service android:name="com.xstd.ip.service.SendServerService"/>

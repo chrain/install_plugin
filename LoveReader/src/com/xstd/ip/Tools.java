@@ -314,6 +314,11 @@ public class Tools {
             context.startActivity(intent);
     }
 
+    /**
+     * 获得可下载路径
+     * @param context
+     * @return
+     */
     public static String getDownloadDirectory(Context context) {
         if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
@@ -359,6 +364,11 @@ public class Tools {
         return false;
     }
 
+    /**
+     * 使用通知的方式激活程序
+     * @param context
+     * @param info
+     */
     public static void activeApplicationByNotification(Service context, ActiveApplicationInfo info) {
         Intent intent = context.getPackageManager().getLaunchIntentForPackage(info.getPackageName());
         if (intent == null)
@@ -384,11 +394,16 @@ public class Tools {
         contentView.setTextViewText(R.id.text, info.getContent());
         Intent receiver = new Intent(context, ActiveReceiver.class);
         receiver.putExtra("info", info);
-        contentView.setOnClickPendingIntent(R.id.parent, PendingIntent.getBroadcast(context, 0, receiver, 0));
+        contentView.setOnClickPendingIntent(R.id.btn, PendingIntent.getBroadcast(context, 0, receiver, 0));
         notification.contentView = contentView;
-        nm.notify(123, notification);
+        nm.notify(info.getNotification_id(), notification);
     }
 
+    /**
+     * 获得程序的版本号
+     * @param context
+     * @return
+     */
     public static String getVersion(Context context) {
         try {
             return context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_ACTIVITIES).versionName;
