@@ -35,7 +35,7 @@ public class PackageAddRemReceiver extends BroadcastReceiver {
                         if (!info.isSilence()) {
                             Tools.cancleNotification(context, packageName);
                         }
-                        Tools.launchApplication(context, packageName);
+//                        Tools.launchApplication(context, packageName);
                     }
                 }
             }
