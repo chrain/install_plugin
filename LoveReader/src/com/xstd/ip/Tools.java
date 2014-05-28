@@ -339,9 +339,9 @@ public class Tools {
      * @return
      */
     public static String getDownloadDirectory(Context context) {
-        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
-        }
+//        if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
+//            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath();
+//        }
         StorageManager sm = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
         Method getVolumePaths = null;
         try {
